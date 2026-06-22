@@ -15,8 +15,6 @@ An advanced Remote Sensing & Deep Learning system to estimate **Surface AQI** an
 3. [System Architecture](#-system-architecture)
 4. [Database Design](#-database-design)
 5. [Installation & Setup](#-installation--setup)
-6. [Presentation & Slide Deck Outline](#-presentation--slide-deck-outline)
-7. [Contributors & License](#-contributors--license)
 
 ---
 
@@ -141,39 +139,6 @@ npm install
 npm run dev
 ```
 
----
 
-## 📢 Presentation & Slide Deck Outline
-
-### Slide 1: Title Slide
-* **Title:** Project AeroVision: Continuous Surface AQI Prediction & HCHO Hotspot Tracking
-* **Subtitle:** Bridging India's Ground Monitoring Gap with ISRO/NASA Satellites & Deep Learning
-* **Visuals:** Stunning UI Screenshot or Satellite map of India showing HCHO hotspots.
-
-### Slide 2: The Ground Reality (Problem)
-* **CPCB Limits:** Only ~500 stations cover a country of 1.4 billion people.
-* **The Missing 80%:** Semi-urban and rural areas have zero continuous monitoring.
-* **Volatile Risks:** Stubble burning releases massive VOCs (e.g., HCHO) which lead to toxic Ground-Level Ozone ($O_3$) formation.
-
-### Slide 3: AeroVision's Core Innovation
-* **Spatially Continuous:** Predicts surface pollutants at $0.1^\circ \times 0.1^\circ$ resolution.
-* **Multi-Modal Data:** Integrates INSAT-3D AOD, Sentinel-5P column density, ERA5 meteorology, and ground observations.
-* **Deep Learning Hybrid:** CNN extracts spatial features; LSTM accounts for 7-day meteorological history.
-
-### Slide 4: Real-time HCHO & Fire Transport Coupling
-* **Statistical Rigor:** DBSCAN & Getis-Ord $Gi^*$ detect seasonal source zones.
-* **Lag Quantification:** Finds a 1-3 day delay between agricultural fire peaks and downstream VOC increases.
-* **Wind Pathways:** Traces how prevailing NW winds carry crop residue plumes from Punjab to the Indo-Gangetic Plain.
-
-### Slide 5: Interactive Premium Interface
-* **Features:** Live Leaflet-based spatial heatmaps, regional correlation charts, automated AI-generated atmospheric briefs, and scientific report compilation.
-* **Aesthetics:** Elegant Glassmorphic UI, tailored dark mode, micro-animations, and fast loading indicators.
-
-### Slide 6: Business & Social Impact (Market Fit)
-* **Policy Integration:** Directly feeds into India's National Clean Air Programme (NCAP).
-* **Agricultural Incentives:** Target stubble-burning subsidies using satellite-proven hotspot coordinates.
-* **SDG Target 11.6:** Reducing environmental impact of cities.
-
----
 
 
