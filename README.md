@@ -5,7 +5,7 @@
 [![PostgreSQL/PostGIS](https://img.shields.io/badge/Database-PostgreSQL%2FPostGIS-blue?logo=postgresql)](https://postgis.net/)
 [![Python ML/DL](https://img.shields.io/badge/Models-RandomForest%20%7C%20XGBoost%20%7C%20CNN--LSTM-orange?logo=python)](https://pytorch.org/)
 
-An advanced, hackathon-ready Remote Sensing & Deep Learning system to estimate **Surface AQI** and detect **Formaldehyde (HCHO) Hotspots** across India using multi-satellite products, meteorological reanalysis, and ground-truth CAQMS monitoring.
+An advanced Remote Sensing & Deep Learning system to estimate **Surface AQI** and detect **Formaldehyde (HCHO) Hotspots** across India using multi-satellite products, meteorological reanalysis, and ground-truth CAQMS monitoring.
 
 ---
 
@@ -15,7 +15,7 @@ An advanced, hackathon-ready Remote Sensing & Deep Learning system to estimate *
 3. [System Architecture](#-system-architecture)
 4. [Database Design](#-database-design)
 5. [Installation & Setup](#-installation--setup)
-6. [Hackathon Pitch & Slide Deck Outline](#-hackathon-pitch--slide-deck-outline)
+6. [Presentation & Slide Deck Outline](#-presentation--slide-deck-outline)
 7. [Contributors & License](#-contributors--license)
 
 ---
@@ -143,7 +143,7 @@ npm run dev
 
 ---
 
-## 📢 Hackathon Pitch & Slide Deck Outline
+## 📢 Presentation & Slide Deck Outline
 
 ### Slide 1: Title Slide
 * **Title:** Project AeroVision: Continuous Surface AQI Prediction & HCHO Hotspot Tracking
