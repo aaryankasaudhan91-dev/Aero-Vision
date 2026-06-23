@@ -3,6 +3,9 @@ import React from 'react';
 interface FilterBarProps {
   selectedState: string;
   setSelectedState: (state: string) => void;
+  selectedCity?: string;
+  setSelectedCity?: (city: string) => void;
+  cities?: string[];
   selectedDate: string;
   setSelectedDate: (date: string) => void;
   pollutants?: string[];
@@ -47,6 +50,9 @@ const states = [
 export const FilterBar: React.FC<FilterBarProps> = ({
   selectedState,
   setSelectedState,
+  selectedCity,
+  setSelectedCity,
+  cities,
   selectedDate,
   setSelectedDate,
   pollutants,
@@ -62,7 +68,10 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Region / State</label>
           <select
             value={selectedState}
-            onChange={(e) => setSelectedState(e.target.value)}
+            onChange={(e) => {
+              setSelectedState(e.target.value);
+              if (setSelectedCity) setSelectedCity('');
+            }}
             className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
           >
             {states.map((st) => (
@@ -73,13 +82,37 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
 
+        {/* City Filter */}
+        {setSelectedCity && cities && (
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">City</label>
+            <select
+              value={selectedCity || ''}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
+            >
+              <option value="">All Cities</option>
+              {cities.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Date Filter */}
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Observation Date</label>
           <input
             type="date"
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val && !isNaN(Date.parse(val))) {
+                setSelectedDate(val);
+              }
+            }}
             className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
           />
         </div>

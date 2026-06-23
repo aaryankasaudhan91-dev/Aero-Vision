@@ -42,9 +42,9 @@ apiClient.interceptors.response.use(
 export const aqiApi = {
   getOverview: (params?: { date?: string; state?: string; city?: string }) =>
     apiClient.get('/aqi/', { params }),
-  getStations: (params?: { state?: string; is_active?: boolean }) =>
+  getStations: (params?: { state?: string; city?: string; is_active?: boolean }) =>
     apiClient.get('/aqi/stations', { params }),
-  getObservations: (params?: { station_id?: string; start_date?: string; end_date?: string; state?: string; limit?: number }) =>
+  getObservations: (params?: { station_id?: string; start_date?: string; end_date?: string; state?: string; city?: string; limit?: number }) =>
     apiClient.get('/aqi/observations', { params }),
   getPredictions: (params?: { date?: string; start_date?: string; end_date?: string; model_name?: string; state?: string }) =>
     apiClient.get('/aqi/predictions', { params }),

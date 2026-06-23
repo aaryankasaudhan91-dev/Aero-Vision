@@ -14,7 +14,12 @@ import FilterBar from './FilterBar';
 
 export const HchoDashboard: React.FC = () => {
   const [selectedState, setSelectedState] = useState('');
-  const [selectedDate, setSelectedDate] = useState('2026-06-22');
+  const getYesterdayString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  };
+  const [selectedDate, setSelectedDate] = useState(getYesterdayString());
   const [selectedMethod, setSelectedMethod] = useState('dbscan');
   const [loading, setLoading] = useState(false);
 
@@ -182,26 +187,34 @@ export const HchoDashboard: React.FC = () => {
 
         {/* Temporal HCHO Trends */}
         <div className="glass-card p-5 rounded-2xl h-[500px] flex flex-col justify-between">
-          <div>
+          <div className="h-full flex flex-col">
             <h3 className="text-sm font-semibold text-slate-300 mb-4">HCHO Temporal Trend</h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
-                  <YAxis
-                    stroke="#64748b"
-                    fontSize={10}
-                    tickFormatter={(v) => (v * 1e5).toFixed(1)}
-                    label={{ value: 'HCHO (×10⁻⁵ mol/m²)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                    labelStyle={{ color: '#94a3b8' }}
-                  />
-                  <Line type="monotone" dataKey="hcho" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="flex-1 h-[400px]">
+              {trends && trends.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trends}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+                    <YAxis
+                      stroke="#64748b"
+                      fontSize={10}
+                      tickFormatter={(v) => (v * 1e5).toFixed(1)}
+                      label={{ value: 'HCHO (×10⁻⁵ mol/m²)', angle: -90, position: 'insideLeft', fill: '#64748b', fontSize: 10 }}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
+                      labelStyle={{ color: '#94a3b8' }}
+                    />
+                    <Line type="monotone" dataKey="mean_hcho" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-6 border border-dashed border-slate-800 rounded-xl">
+                  <span className="text-2xl mb-2">📊</span>
+                  <span className="text-xs font-medium text-slate-400">No HCHO Trend Data Available</span>
+                  <p className="text-[10px] text-slate-500 mt-1 max-w-xs">No TROPOMI HCHO readings were available during the selected 7-day period.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

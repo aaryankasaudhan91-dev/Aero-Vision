@@ -1,6 +1,6 @@
 """Fire Service — Active fire data and fire-HCHO correlation analysis."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional, List, Dict, Any
 from app.database import supabase
 
@@ -14,13 +14,26 @@ class FireService:
     ) -> Dict[str, Any]:
         """Get fire overview with counts and FRP summary."""
         target_date = date or datetime.utcnow().date()
-        query = supabase.table("fire_records").select("*", count="exact").eq("detected_date", str(target_date))
-        if state:
-            query = query.eq("state", state)
-        if source:
-            query = query.eq("source", source)
-        result = query.limit(500).execute()
-        fires = result.data or []
+        fires = []
+        attempts = 0
+        current_query_date = target_date
+
+        while attempts < 10:
+            query = supabase.table("fire_records").select("*", count="exact").eq("detected_date", str(current_query_date))
+            if state:
+                query = query.eq("state", state)
+            if source:
+                query = query.eq("source", source)
+            result = query.limit(500).execute()
+
+            if result.data:
+                fires = result.data
+                break
+
+            if isinstance(current_query_date, str):
+                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+            current_query_date = current_query_date - timedelta(days=1)
+            attempts += 1
 
         frp_values = [f["frp"] for f in fires if f.get("frp")]
         state_counts = {}
@@ -29,8 +42,8 @@ class FireService:
             state_counts[s] = state_counts.get(s, 0) + 1
 
         return {
-            "date": str(target_date),
-            "total_fires": result.count or 0,
+            "date": str(current_query_date),
+            "total_fires": len(fires),
             "avg_frp": round(sum(frp_values) / len(frp_values), 2) if frp_values else None,
             "max_frp": round(max(frp_values), 2) if frp_values else None,
             "state_distribution": state_counts,
@@ -45,22 +58,47 @@ class FireService:
         radius_km: float = 100.0, limit: int = 500
     ) -> List[Dict]:
         """Get fire records with filtering."""
-        query = supabase.table("fire_records").select("*")
-        if start_date:
-            query = query.gte("detected_date", str(start_date))
-        if end_date:
-            query = query.lte("detected_date", str(end_date))
-        if state:
-            query = query.eq("state", state)
-        if source:
-            query = query.eq("source", source)
-        if fire_type:
-            query = query.eq("fire_type", fire_type)
-        if min_frp:
-            query = query.gte("frp", min_frp)
+        if start_date and end_date and start_date == end_date:
+            attempts = 0
+            current_query_date = start_date
+            while attempts < 10:
+                query = supabase.table("fire_records").select("*")
+                query = query.eq("detected_date", str(current_query_date))
+                if state:
+                    query = query.eq("state", state)
+                if source:
+                    query = query.eq("source", source)
+                if fire_type:
+                    query = query.eq("fire_type", fire_type)
+                if min_frp:
+                    query = query.gte("frp", min_frp)
+                result = query.limit(limit).execute()
+                if result.data:
+                    data = result.data
+                    break
 
-        result = query.order("detected_date", desc=True).limit(limit).execute()
-        data = result.data or []
+                if isinstance(current_query_date, str):
+                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+                current_query_date = current_query_date - timedelta(days=1)
+                attempts += 1
+            else:
+                data = []
+        else:
+            query = supabase.table("fire_records").select("*")
+            if start_date:
+                query = query.gte("detected_date", str(start_date))
+            if end_date:
+                query = query.lte("detected_date", str(end_date))
+            if state:
+                query = query.eq("state", state)
+            if source:
+                query = query.eq("source", source)
+            if fire_type:
+                query = query.eq("fire_type", fire_type)
+            if min_frp:
+                query = query.gte("frp", min_frp)
+            result = query.order("detected_date", desc=True).limit(limit).execute()
+            data = result.data or []
 
         if lat is not None and lon is not None:
             from app.geospatial.utils import haversine_filter

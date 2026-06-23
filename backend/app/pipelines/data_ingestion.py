@@ -74,20 +74,42 @@ class CPCBIngestion:
 
     async def ingest_observations(self, station_id: str, observations: List[Dict]) -> int:
         """Store observation records in Supabase."""
+        from app.ml.aqi_engine import compute_aqi
         inserted = 0
         batch = []
         for obs in observations:
             try:
+                pm25 = self._safe_float(obs.get("PM2.5", obs.get("pm25")))
+                pm10 = self._safe_float(obs.get("PM10", obs.get("pm10")))
+                no2 = self._safe_float(obs.get("NO2", obs.get("no2")))
+                so2 = self._safe_float(obs.get("SO2", obs.get("so2")))
+                co = self._safe_float(obs.get("CO", obs.get("co")))
+                o3 = self._safe_float(obs.get("Ozone", obs.get("o3")))
+                nh3 = self._safe_float(obs.get("NH3", obs.get("nh3")))
+
+                aqi_res = compute_aqi({
+                    "PM2.5": pm25,
+                    "PM10": pm10,
+                    "NO2": no2,
+                    "SO2": so2,
+                    "CO": co,
+                    "O3": o3,
+                    "NH3": nh3
+                })
+
                 record = {
                     "station_id": station_id,
                     "observed_at": obs.get("timestamp", obs.get("datetime")),
-                    "pm25": self._safe_float(obs.get("PM2.5", obs.get("pm25"))),
-                    "pm10": self._safe_float(obs.get("PM10", obs.get("pm10"))),
-                    "no2": self._safe_float(obs.get("NO2", obs.get("no2"))),
-                    "so2": self._safe_float(obs.get("SO2", obs.get("so2"))),
-                    "co": self._safe_float(obs.get("CO", obs.get("co"))),
-                    "o3": self._safe_float(obs.get("Ozone", obs.get("o3"))),
-                    "nh3": self._safe_float(obs.get("NH3", obs.get("nh3"))),
+                    "pm25": pm25,
+                    "pm10": pm10,
+                    "no2": no2,
+                    "so2": so2,
+                    "co": co,
+                    "o3": o3,
+                    "nh3": nh3,
+                    "aqi": aqi_res.get("aqi"),
+                    "aqi_category": aqi_res.get("category"),
+                    "prominent_pollutant": aqi_res.get("prominent_pollutant"),
                 }
                 batch.append(record)
                 if len(batch) >= 100:
@@ -289,47 +311,74 @@ class ERA5Ingestion:
         """Parse NetCDF file and store in Supabase."""
         import xarray as xr
         import numpy as np
+        import zipfile
+        import os
+        import glob
 
-        ds = xr.open_dataset(filepath)
-        times = ds.time.values if "time" in ds.dims else [np.datetime64("today")]
+        import tempfile
 
-        batch = []
-        for t in times:
-            dt = str(t)[:10]
-            for lat in ds.latitude.values[::4]:  # Subsample for storage
-                for lon in ds.longitude.values[::4]:
-                    point = ds.sel(latitude=lat, longitude=lon, time=t, method="nearest")
-                    record = {
-                        "source": source,
-                        "observed_date": dt,
-                        "latitude": float(lat),
-                        "longitude": float(lon),
-                        "temperature_2m": self._extract_val(point, "t2m"),
-                        "u_wind_10m": self._extract_val(point, "u10"),
-                        "v_wind_10m": self._extract_val(point, "v10"),
-                        "pbl_height": self._extract_val(point, "blh"),
-                        "total_precipitation": self._extract_val(point, "tp"),
-                        "surface_pressure": self._extract_val(point, "sp"),
-                    }
-                    # Compute derived fields
-                    u = record.get("u_wind_10m")
-                    v = record.get("v_wind_10m")
-                    if u is not None and v is not None:
-                        import math
-                        record["wind_speed_10m"] = round(math.sqrt(u**2 + v**2), 3)
-                        record["wind_direction"] = round((math.degrees(math.atan2(-u, -v)) + 360) % 360, 1)
+        nc_files = [filepath]
+        temp_dir_obj = None
+        if zipfile.is_zipfile(filepath):
+            temp_dir_obj = tempfile.TemporaryDirectory()
+            extract_dir = temp_dir_obj.name
+            with zipfile.ZipFile(filepath, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+            nc_files = glob.glob(os.path.join(extract_dir, "*.nc"))
+        elif not os.path.isabs(filepath) and "💖" in os.getcwd():
+            # If it's not a zip, we still need to move it out of the emoji path
+            temp_dir_obj = tempfile.TemporaryDirectory()
+            safe_filepath = os.path.join(temp_dir_obj.name, os.path.basename(filepath))
+            import shutil
+            shutil.copy2(filepath, safe_filepath)
+            nc_files = [safe_filepath]
+        
+        total_ingested = 0
+        for nc_file in nc_files:
+            ds = xr.open_dataset(nc_file)
+            time_dim = "valid_time" if "valid_time" in ds.dims else "time"
+            times = ds[time_dim].values if time_dim in ds.dims else [np.datetime64("today")]
 
-                    batch.append(record)
-                    if len(batch) >= 500:
-                        supabase.table("meteorological_data").insert(batch).execute()
-                        batch = []
+            batch = []
+            for t in times:
+                dt = str(t)[:10]
+                for lat in ds.latitude.values[::4]:  # Subsample for storage
+                    for lon in ds.longitude.values[::4]:
+                        point = ds.sel(latitude=lat, longitude=lon, **{time_dim: t}, method="nearest")
+                        record = {
+                            "source": source,
+                            "observed_date": dt,
+                            "latitude": float(lat),
+                            "longitude": float(lon),
+                            "temperature_2m": self._extract_val(point, "t2m"),
+                            "u_wind_10m": self._extract_val(point, "u10"),
+                            "v_wind_10m": self._extract_val(point, "v10"),
+                            "pbl_height": self._extract_val(point, "blh"),
+                            "total_precipitation": self._extract_val(point, "tp"),
+                            "surface_pressure": self._extract_val(point, "sp"),
+                        }
+                        # Compute derived fields
+                        u = record.get("u_wind_10m")
+                        v = record.get("v_wind_10m")
+                        if u is not None and v is not None:
+                            import math
+                            record["wind_speed_10m"] = round(math.sqrt(u**2 + v**2), 3)
+                            record["wind_direction"] = round((math.degrees(math.atan2(-u, -v)) + 360) % 360, 1)
 
-        if batch:
-            supabase.table("meteorological_data").insert(batch).execute()
+                        batch.append(record)
+                        if len(batch) >= 500:
+                            supabase.table("meteorological_data").insert(batch).execute()
+                            total_ingested += len(batch)
+                            batch = []
 
-        ds.close()
+            if batch:
+                supabase.table("meteorological_data").insert(batch).execute()
+                total_ingested += len(batch)
+
+            ds.close()
+
         logger.info(f"Ingested ERA5 data from {filepath}")
-        return len(batch)
+        return total_ingested
 
     @staticmethod
     def _extract_val(point, var_name):

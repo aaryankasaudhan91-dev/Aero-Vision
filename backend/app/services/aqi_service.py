@@ -14,17 +14,29 @@ class AQIService:
     ) -> Dict[str, Any]:
         """Get AQI overview with latest data."""
         target_date = date or datetime.utcnow().date()
-        query = supabase.table("cpcb_observations").select(
-            "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
-        ).gte("observed_at", f"{target_date}T00:00:00").lte("observed_at", f"{target_date}T23:59:59")
+        observations = []
+        attempts = 0
+        current_query_date = target_date
 
-        if state:
-            query = query.eq("cpcb_stations.state", state)
-        if city:
-            query = query.eq("cpcb_stations.city", city)
+        while attempts < 10:
+            query = supabase.table("cpcb_observations").select(
+                "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
+            ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
 
-        result = query.order("observed_at", desc=True).limit(500).execute()
-        observations = result.data if result.data else []
+            if state:
+                query = query.eq("cpcb_stations.state", state)
+            if city:
+                query = query.eq("cpcb_stations.city", city)
+
+            result = query.order("observed_at", desc=True).limit(500).execute()
+            if result.data:
+                observations = result.data
+                break
+
+            if isinstance(current_query_date, str):
+                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+            current_query_date = current_query_date - timedelta(days=1)
+            attempts += 1
 
         # Compute summary statistics
         aqi_values = [o["aqi"] for o in observations if o.get("aqi")]
@@ -33,32 +45,69 @@ class AQIService:
             cat = o.get("aqi_category", "Unknown")
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
+        avg_aqi = sum(aqi_values) / len(aqi_values) if aqi_values else None
+        avg_category = None
+        if avg_aqi is not None:
+            from app.ml.aqi_engine import AQI_CATEGORIES
+            for (lo, hi), cat in AQI_CATEGORIES.items():
+                if lo <= avg_aqi <= hi:
+                    avg_category = cat
+                    break
+            if avg_aqi > 500:
+                avg_category = "Severe"
+
         return {
-            "date": str(target_date),
+            "date": str(current_query_date),
             "total_observations": len(observations),
-            "avg_aqi": round(sum(aqi_values) / len(aqi_values), 1) if aqi_values else None,
+            "avg_aqi": round(avg_aqi, 1) if avg_aqi is not None else None,
             "max_aqi": max(aqi_values) if aqi_values else None,
             "min_aqi": min(aqi_values) if aqi_values else None,
+            "aqi_category": avg_category,
             "category_distribution": category_counts,
             "observations": observations[:100],
         }
 
     async def get_stations(
-        self, state: Optional[str] = None, is_active: bool = True
+        self, state: Optional[str] = None, city: Optional[str] = None, is_active: bool = True
     ) -> List[Dict]:
         """Get CPCB monitoring stations."""
         query = supabase.table("cpcb_stations").select("*").eq("is_active", is_active)
         if state:
             query = query.eq("state", state)
+        if city:
+            query = query.eq("city", city)
         result = query.order("state").execute()
         return result.data if result.data else []
 
     async def get_observations(
         self, station_id: Optional[str] = None,
         start_date: Optional[date] = None, end_date: Optional[date] = None,
-        state: Optional[str] = None, limit: int = 100
+        state: Optional[str] = None, city: Optional[str] = None, limit: int = 100
     ) -> List[Dict]:
         """Get CPCB ground observations."""
+        if start_date and end_date and start_date == end_date:
+            attempts = 0
+            current_query_date = start_date
+            while attempts < 10:
+                query = supabase.table("cpcb_observations").select(
+                    "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
+                ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
+                if station_id:
+                    query = query.eq("station_id", station_id)
+                if state:
+                    query = query.eq("cpcb_stations.state", state)
+                if city:
+                    query = query.eq("cpcb_stations.city", city)
+
+                result = query.limit(limit).execute()
+                if result.data:
+                    return result.data
+
+                if isinstance(current_query_date, str):
+                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+                current_query_date = current_query_date - timedelta(days=1)
+                attempts += 1
+            return []
         query = supabase.table("cpcb_observations").select(
             "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
         )
@@ -70,6 +119,8 @@ class AQIService:
             query = query.lte("observed_at", f"{end_date}T23:59:59")
         if state:
             query = query.eq("cpcb_stations.state", state)
+        if city:
+            query = query.eq("cpcb_stations.city", city)
 
         result = query.order("observed_at", desc=True).limit(limit).execute()
         return result.data if result.data else []

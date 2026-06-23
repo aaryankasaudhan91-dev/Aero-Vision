@@ -276,21 +276,20 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
 
       if (container.contains(dom)) container.removeChild(dom);
 
-      mapGeometry.dispose();
-      baseMaterial.dispose();
-      topMaterial.dispose();
-      edgesGeometry.dispose();
-      lineMaterial.dispose();
-      sphereGeometry.dispose();
-
-      targetBarsArray.forEach((bar) => {
-        bar.geometry.dispose();
-        (bar.material as THREE.Material).dispose();
-        bar.children.forEach((c) => {
-          (c as THREE.Mesh).geometry.dispose();
-          ((c as THREE.Mesh).material as THREE.Material).dispose();
-        });
+      // Deep cleanup of Three.js objects
+      scene.traverse((object: any) => {
+        if (object.geometry) {
+          object.geometry.dispose();
+        }
+        if (object.material) {
+          if (Array.isArray(object.material)) {
+            object.material.forEach((mat: any) => mat.dispose());
+          } else {
+            object.material.dispose();
+          }
+        }
       });
+
       renderer.dispose();
     };
   }, [points, dataType]);
@@ -306,6 +305,16 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
         </div>
         <p className="text-[10px] text-slate-400 mt-1">Drag map to pivot view • Scroll to zoom</p>
       </div>
+
+      {points.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm z-10 p-6 text-center">
+          <div className="text-4xl mb-3">📡</div>
+          <h4 className="text-sm font-semibold text-slate-300">No Spatial Observations Found</h4>
+          <p className="text-xs text-slate-500 max-w-xs mt-1">
+            No telemetry or monitoring data was registered for this date/region. Try changing the date or selecting another state.
+          </p>
+        </div>
+      )}
 
       {tooltip.visible && (
         <div

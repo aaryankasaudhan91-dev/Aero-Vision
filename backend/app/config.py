@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     CDS_API_URL: str = "https://cds.climate.copernicus.eu/api"
     MOSDAC_USERNAME: str = ""
     MOSDAC_PASSWORD: str = ""
+    DATA_GOV_IN_API_KEY: str = ""
+    GEMINI_API_KEY: str = ""
 
     @property
     def cors_origins_list(self) -> List[str]:

@@ -1,2 +1,13 @@
 .env
 config.json
+planning-with-ai-46ca2-c19744922802.json
+.env.local
+__pycache__/
+*.pyc
+node_modules/
+dist/
+backend/credentials/gee-service-account.json
+
+
+
+

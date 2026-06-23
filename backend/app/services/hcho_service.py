@@ -1,6 +1,6 @@
 """HCHO Service — Formaldehyde hotspot detection and analysis."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from app.database import supabase
@@ -14,18 +14,55 @@ class HCHOService:
         season: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get HCHO overview with hotspot summary."""
-        query = supabase.table("hcho_hotspots").select("*", count="exact")
-        if date:
-            query = query.eq("hotspot_date", str(date))
+        target_date = date or datetime.utcnow().date()
+        obs_data = []
+        attempts = 0
+        current_query_date = target_date
+
+        while attempts < 10:
+            query = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
+            res = query.limit(2000).execute()
+            if res.data:
+                obs_data = res.data
+                break
+
+            if isinstance(current_query_date, str):
+                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+            current_query_date = current_query_date - timedelta(days=1)
+            attempts += 1
+
+        hcho_vals = [r["column_value"] for r in obs_data if r.get("column_value") is not None]
+        avg_hcho = sum(hcho_vals) / len(hcho_vals) if hcho_vals else 0.0
+
+        hotspots_data = []
+        hotspot_query_date = current_query_date
+        hq = supabase.table("hcho_hotspots").select("*", count="exact").eq("hotspot_date", str(hotspot_query_date))
         if state:
-            query = query.eq("state", state)
+            hq = hq.eq("state", state)
         if season:
-            query = query.eq("season", season)
-        result = query.order("hotspot_date", desc=True).limit(100).execute()
-        hotspots = result.data or []
+            hq = hq.eq("season", season)
+        h_res = hq.limit(100).execute()
+        hotspots_data = h_res.data or []
+        total_hotspots = h_res.count or len(hotspots_data)
+
+        if not hotspots_data and obs_data:
+            sorted_obs = sorted(obs_data, key=lambda x: x.get("column_value", 0), reverse=True)
+            top_pct = sorted_obs[:max(10, len(sorted_obs) // 20)]
+            for idx, pt in enumerate(top_pct):
+                hotspots_data.append({
+                    "id": idx,
+                    "detection_method": "percentile",
+                    "hotspot_date": str(current_query_date),
+                    "centroid_lat": pt["latitude"],
+                    "centroid_lon": pt["longitude"],
+                    "mean_hcho": pt["column_value"],
+                    "region_name": f"Cluster Zone {idx + 1}",
+                    "state": state or "Regional Zone",
+                })
+            total_hotspots = len(hotspots_data)
 
         regions = {}
-        for h in hotspots:
+        for h in hotspots_data:
             r = h.get("region_name", "Unknown")
             if r not in regions:
                 regions[r] = {"count": 0, "mean_hcho": []}
@@ -36,12 +73,20 @@ class HCHOService:
         region_summary = {}
         for r, v in regions.items():
             avg = sum(v["mean_hcho"]) / len(v["mean_hcho"]) if v["mean_hcho"] else 0
-            region_summary[r] = {"hotspot_count": v["count"], "avg_hcho": round(avg, 4)}
+            region_summary[r] = {"hotspot_count": v["count"], "avg_hcho": round(avg, 6)}
+
+        highest_region = "N/A"
+        if region_summary:
+            highest_region = max(region_summary.keys(), key=lambda r: region_summary[r]["avg_hcho"])
 
         return {
-            "total_hotspots": result.count or 0,
+            "date": str(current_query_date),
+            "total_hotspots": total_hotspots,
             "region_summary": region_summary,
-            "hotspots": hotspots[:50],
+            "hotspots": hotspots_data[:50],
+            "avg_hcho": avg_hcho,
+            "hotspot_count": total_hotspots,
+            "highest_region": highest_region,
         }
 
     async def get_concentrations(
@@ -71,11 +116,29 @@ class HCHOService:
         min_hcho: Optional[float] = None, limit: int = 200
     ) -> List[Dict]:
         """Get detected HCHO hotspots with filtering."""
-        query = supabase.table("hcho_hotspots").select("*")
-        if start_date:
-            query = query.gte("hotspot_date", str(start_date))
-        if end_date:
-            query = query.lte("hotspot_date", str(end_date))
+        target_date = start_date or datetime.utcnow().date()
+        obs_data = []
+        attempts = 0
+        current_query_date = target_date
+
+        if start_date == end_date:
+            while attempts < 10:
+                res = supabase.table("tropomi_products").select("id").eq("product_type", "HCHO").eq("observed_date", str(current_query_date)).limit(1).execute()
+                if res.data:
+                    break
+                if isinstance(current_query_date, str):
+                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+                current_query_date = current_query_date - timedelta(days=1)
+                attempts += 1
+
+            query = supabase.table("hcho_hotspots").select("*").eq("hotspot_date", str(current_query_date))
+        else:
+            query = supabase.table("hcho_hotspots").select("*")
+            if start_date:
+                query = query.gte("hotspot_date", str(start_date))
+            if end_date:
+                query = query.lte("hotspot_date", str(end_date))
+
         if method:
             query = query.eq("detection_method", method)
         if season:
@@ -88,7 +151,26 @@ class HCHOService:
             query = query.gte("mean_hcho", min_hcho)
 
         result = query.order("mean_hcho", desc=True).limit(limit).execute()
-        return result.data or []
+        hotspots = result.data or []
+
+        if not hotspots and start_date == end_date:
+            t_res = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date)).limit(2000).execute()
+            obs_data = t_res.data or []
+            if obs_data:
+                sorted_obs = sorted(obs_data, key=lambda x: x.get("column_value", 0), reverse=True)
+                top_pct = sorted_obs[:max(10, len(sorted_obs) // 20)]
+                for idx, pt in enumerate(top_pct):
+                    hotspots.append({
+                        "id": idx,
+                        "detection_method": method or "percentile",
+                        "hotspot_date": str(current_query_date),
+                        "centroid_lat": pt["latitude"],
+                        "centroid_lon": pt["longitude"],
+                        "mean_hcho": pt["column_value"],
+                        "region_name": f"Cluster Zone {idx + 1}",
+                        "state": state or "Regional Zone",
+                    })
+        return hotspots
 
     async def get_hotspot_regions(self) -> List[Dict]:
         """Get aggregated hotspot region summary."""

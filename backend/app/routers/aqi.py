@@ -22,10 +22,11 @@ async def get_aqi_overview(
 @router.get("/stations")
 async def get_stations(
     state: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
     is_active: bool = Query(True),
 ):
     """Get all CPCB monitoring stations."""
-    return await aqi_service.get_stations(state=state, is_active=is_active)
+    return await aqi_service.get_stations(state=state, city=city, is_active=is_active)
 
 
 @router.get("/observations")
@@ -34,12 +35,13 @@ async def get_observations(
     start_date: Optional[date] = Query(None),
     end_date: Optional[date] = Query(None),
     state: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
     limit: int = Query(100, le=1000),
 ):
     """Get ground-truth CPCB observations."""
     return await aqi_service.get_observations(
         station_id=station_id, start_date=start_date,
-        end_date=end_date, state=state, limit=limit
+        end_date=end_date, state=state, city=city, limit=limit
     )
 
 

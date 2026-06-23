@@ -16,7 +16,14 @@ import FilterBar from './FilterBar';
 
 export const PollutantDashboard: React.FC = () => {
   const [selectedState, setSelectedState] = useState('');
-  const [selectedDate, setSelectedDate] = useState('2026-06-22');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [citiesList, setCitiesList] = useState<string[]>([]);
+  const getYesterdayString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  };
+  const [selectedDate, setSelectedDate] = useState(getYesterdayString());
   const [selectedPollutant, setSelectedPollutant] = useState('PM2.5');
   const [loading, setLoading] = useState(false);
 
@@ -47,11 +54,22 @@ export const PollutantDashboard: React.FC = () => {
         start_date: selectedDate,
         end_date: selectedDate,
         state: selectedState,
+        city: selectedCity,
         limit: 100,
       });
 
       const items = res.data || [];
       setDataList(items);
+
+      // Fetch list of unique cities for the selected state to populate dropdown
+      const stationsRes = await aqiApi.getStations({
+        state: selectedState,
+        is_active: true,
+      });
+      const uniqueCities = Array.from(
+        new Set((stationsRes.data || []).map((s: any) => s.city).filter(Boolean))
+      ) as string[];
+      setCitiesList(uniqueCities);
 
       // Extract pollutant value and sort for ranking
       const key = selectedPollutant.toLowerCase().replace('.', '');
@@ -76,7 +94,7 @@ export const PollutantDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedState, selectedDate, selectedPollutant]);
+  }, [selectedState, selectedCity, selectedDate, selectedPollutant]);
 
   return (
     <div className="flex-1 p-6 space-y-6">
@@ -93,6 +111,9 @@ export const PollutantDashboard: React.FC = () => {
       <FilterBar
         selectedState={selectedState}
         setSelectedState={setSelectedState}
+        selectedCity={selectedCity}
+        setSelectedCity={setSelectedCity}
+        cities={citiesList}
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
         pollutants={['PM2.5', 'PM10', 'NO2', 'SO2', 'CO', 'O3']}
@@ -138,28 +159,36 @@ export const PollutantDashboard: React.FC = () => {
 
         {/* Top 10 Polluted Stations Chart */}
         <div className="glass-card p-5 rounded-2xl h-[520px] flex flex-col justify-between">
-          <div>
+          <div className="h-full flex flex-col">
             <h3 className="text-sm font-semibold text-slate-300 mb-4">
               Top 10 Hotspots ({selectedPollutant})
             </h3>
-            <div className="h-[400px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ranking} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis type="number" stroke="#64748b" fontSize={10} />
-                  <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={8} width={80} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                    labelStyle={{ color: '#94a3b8' }}
-                  />
-                  <ReferenceLine x={standards[selectedPollutant]} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Limit', fill: '#ef4444', fontSize: 10 }} />
-                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
-                    {ranking.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={getPollutantColor(entry.value, selectedPollutant)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="flex-1 h-[400px]">
+              {ranking && ranking.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ranking} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis type="number" stroke="#64748b" fontSize={10} />
+                    <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={8} width={80} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
+                      labelStyle={{ color: '#94a3b8' }}
+                    />
+                    <ReferenceLine x={standards[selectedPollutant]} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Limit', fill: '#ef4444', fontSize: 10 }} />
+                    <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
+                      {ranking.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getPollutantColor(entry.value, selectedPollutant)} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-6 border border-dashed border-slate-800 rounded-xl">
+                  <span className="text-2xl mb-2">📊</span>
+                  <span className="text-xs font-medium text-slate-400">No Hotspot Data Available</span>
+                  <p className="text-[10px] text-slate-500 mt-1 max-w-xs">No active stations exceeded the standard metrics or reported observations for this pollutant on this date.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

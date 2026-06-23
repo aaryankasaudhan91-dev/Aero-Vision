@@ -1,6 +1,6 @@
 """Transport Service — Wind-based pollutant transport analysis."""
 
-from datetime import date
+from datetime import date, datetime, timedelta
 from typing import Optional, List, Dict, Any
 from app.database import supabase
 import math
@@ -9,44 +9,37 @@ import math
 class TransportService:
     """Service for wind vector analysis and transport pathway computation."""
 
-    async def get_overview(self, date: Optional[date] = None, source_region: Optional[str] = None) -> Dict:
+    async def get_overview(self, date: Optional[date] = None, source_region: Optional[str] = None) -> List[Dict]:
         """Get transport analysis overview."""
-        query = supabase.table("transport_analysis").select("*", count="exact")
+        query = supabase.table("transport_analysis").select("*")
         if date:
             query = query.eq("analysis_date", str(date))
         if source_region:
             query = query.eq("source_region", source_region)
         result = query.order("analysis_date", desc=True).limit(100).execute()
-
-        regions = {}
-        for r in (result.data or []):
-            src = r.get("source_region", "Unknown")
-            if src not in regions:
-                regions[src] = {"count": 0, "avg_wind_speed": [], "primary_direction": []}
-            regions[src]["count"] += 1
-            if r.get("wind_speed"):
-                regions[src]["avg_wind_speed"].append(r["wind_speed"])
-            if r.get("wind_direction"):
-                regions[src]["primary_direction"].append(r["wind_direction"])
-
-        region_summary = {}
-        for rname, v in regions.items():
-            region_summary[rname] = {
-                "transport_events": v["count"],
-                "avg_wind_speed": round(sum(v["avg_wind_speed"]) / len(v["avg_wind_speed"]), 2) if v["avg_wind_speed"] else None,
-            }
-
-        return {"total_records": result.count or 0, "region_summary": region_summary}
+        return result.data or []
 
     async def get_wind_vectors(self, date: date, level: str = "850hpa", bounds: Optional[str] = None) -> List[Dict]:
         """Get wind vector field for map visualization."""
-        query = supabase.table("meteorological_data").select(
-            "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
-            "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
-        ).eq("observed_date", str(date))
+        attempts = 0
+        current_query_date = date
+        data = []
 
-        result = query.limit(5000).execute()
-        data = result.data or []
+        while attempts < 10:
+            query = supabase.table("meteorological_data").select(
+                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
+                "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
+            ).eq("observed_date", str(current_query_date))
+
+            result = query.limit(5000).execute()
+            if result.data:
+                data = result.data
+                break
+
+            if isinstance(current_query_date, str):
+                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+            current_query_date = current_query_date - timedelta(days=1)
+            attempts += 1
 
         vectors = []
         for r in data:
@@ -91,13 +84,26 @@ class TransportService:
         self, receptor_lat: float, receptor_lon: float, date: date, hours_back: int = 72
     ) -> Dict:
         """Compute source attribution for a receptor location using wind back-tracking."""
-        met_data = supabase.table("meteorological_data").select(
-            "latitude, longitude, u_wind_850hpa, v_wind_850hpa, wind_speed_10m"
-        ).eq("observed_date", str(date)).limit(2000).execute()
+        attempts = 0
+        current_query_date = date
+        data = []
 
-        data = met_data.data or []
+        while attempts < 10:
+            met_data = supabase.table("meteorological_data").select(
+                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, wind_speed_10m"
+            ).eq("observed_date", str(current_query_date)).limit(2000).execute()
+
+            if met_data.data:
+                data = met_data.data
+                break
+
+            if isinstance(current_query_date, str):
+                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
+            current_query_date = current_query_date - timedelta(days=1)
+            attempts += 1
+
         if not data:
-            return {"receptor": {"lat": receptor_lat, "lon": receptor_lon}, "sources": []}
+            return {"receptor": {"lat": receptor_lat, "lon": receptor_lon}, "sources": [], "date": str(date), "trajectory": []}
 
         # Simple back-trajectory estimation
         trajectory = [{"lat": receptor_lat, "lon": receptor_lon, "hour": 0}]
@@ -128,7 +134,7 @@ class TransportService:
 
         return {
             "receptor": {"lat": receptor_lat, "lon": receptor_lon},
-            "date": str(date),
+            "date": str(current_query_date),
             "trajectory": trajectory,
             "estimated_source": trajectory[-1] if trajectory else None,
         }

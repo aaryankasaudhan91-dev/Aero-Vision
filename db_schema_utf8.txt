@@ -1,0 +1,64 @@
+Tables in public schema:
+- geography_columns
+  Count: 0
+  Columns: [('f_table_catalog', 'name'), ('f_table_schema', 'name'), ('f_table_name', 'name'), ('f_geography_column', 'name'), ('coord_dimension', 'integer'), ('srid', 'integer'), ('type', 'text')]
+- spatial_ref_sys
+  Count: 8500
+  Columns: [('srid', 'integer'), ('auth_name', 'character varying'), ('auth_srid', 'integer'), ('srtext', 'character varying'), ('proj4text', 'character varying')]
+- cpcb_stations
+  Count: 29
+  Columns: [('id', 'bigint'), ('station_id', 'text'), ('station_name', 'text'), ('city', 'text'), ('state', 'text'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('elevation_m', 'double precision'), ('station_type', 'text'), ('is_active', 'boolean'), ('created_at', 'timestamp with time zone')]
+- geometry_columns
+  Count: 12
+  Columns: [('f_table_catalog', 'character varying'), ('f_table_schema', 'name'), ('f_table_name', 'name'), ('f_geometry_column', 'name'), ('coord_dimension', 'integer'), ('srid', 'integer'), ('type', 'character varying')]
+- tropomi_products
+  Count: 2789
+  Columns: [('id', 'bigint'), ('product_type', 'text'), ('observed_date', 'date'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('column_value', 'double precision'), ('column_unit', 'text'), ('tropospheric_column', 'double precision'), ('qa_value', 'double precision'), ('cloud_fraction', 'double precision'), ('created_at', 'timestamp with time zone')]
+    Date column 'observed_date': min=2026-06-22, max=2026-06-22
+- cpcb_observations
+  Count: 232
+  Columns: [('id', 'bigint'), ('station_id', 'text'), ('observed_at', 'timestamp with time zone'), ('pm25', 'double precision'), ('pm10', 'double precision'), ('no2', 'double precision'), ('so2', 'double precision'), ('co', 'double precision'), ('o3', 'double precision'), ('nh3', 'double precision'), ('aqi', 'integer'), ('aqi_category', 'text'), ('prominent_pollutant', 'text'), ('quality_flag', 'integer'), ('created_at', 'timestamp with time zone')]
+- satellite_aod
+  Count: 0
+  Columns: [('id', 'bigint'), ('source', 'text'), ('observed_date', 'date'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('aod_550nm', 'double precision'), ('cloud_fraction', 'double precision'), ('qa_flag', 'double precision'), ('created_at', 'timestamp with time zone')]
+    Date column 'observed_date': min=None, max=None
+- transport_analysis
+  Count: 0
+  Columns: [('id', 'bigint'), ('analysis_date', 'date'), ('source_lat', 'double precision'), ('source_lon', 'double precision'), ('source_geom', 'USER-DEFINED'), ('wind_u_850', 'double precision'), ('wind_v_850', 'double precision'), ('wind_speed', 'double precision'), ('wind_direction', 'double precision'), ('transport_distance_km', 'double precision'), ('source_region', 'text'), ('receptor_region', 'text'), ('trajectory_geom', 'USER-DEFINED'), ('created_at', 'timestamp with time zone')]
+    Date column 'analysis_date': min=None, max=None
+- model_metadata
+  Count: 0
+  Columns: [('id', 'bigint'), ('model_name', 'text'), ('model_version', 'text'), ('target_variable', 'text'), ('training_date', 'timestamp with time zone'), ('training_samples', 'integer'), ('rmse', 'double precision'), ('mae', 'double precision'), ('r_squared', 'double precision'), ('pearson_r', 'double precision'), ('hyperparameters', 'jsonb'), ('feature_importance', 'jsonb'), ('model_path', 'text'), ('is_active', 'boolean'), ('created_at', 'timestamp with time zone')]
+    Date column 'training_date': min=None, max=None
+- ai_insights
+  Count: 0
+  Columns: [('id', 'bigint'), ('insight_type', 'text'), ('title', 'text'), ('summary', 'text'), ('detailed_text', 'text'), ('region', 'text'), ('state', 'text'), ('period_start', 'date'), ('period_end', 'date'), ('severity', 'text'), ('metrics', 'jsonb'), ('created_at', 'timestamp with time zone')]
+- aqi_maps
+  Count: 0
+  Columns: [('id', 'bigint'), ('map_type', 'text'), ('map_date', 'date'), ('period_start', 'date'), ('period_end', 'date'), ('region_type', 'text'), ('region_name', 'text'), ('state', 'text'), ('boundary_geom', 'USER-DEFINED'), ('avg_aqi', 'double precision'), ('max_aqi', 'double precision'), ('min_aqi', 'double precision'), ('dominant_pollutant', 'text'), ('aqi_category', 'text'), ('pm25_avg', 'double precision'), ('no2_avg', 'double precision'), ('so2_avg', 'double precision'), ('co_avg', 'double precision'), ('o3_avg', 'double precision'), ('station_count', 'integer'), ('raster_path', 'text'), ('created_at', 'timestamp with time zone')]
+    Date column 'map_date': min=None, max=None
+- fire_hcho_correlations
+  Count: 0
+  Columns: [('id', 'bigint'), ('region_name', 'text'), ('state', 'text'), ('period_start', 'date'), ('period_end', 'date'), ('season', 'text'), ('pearson_r', 'double precision'), ('pearson_p', 'double precision'), ('spearman_r', 'double precision'), ('spearman_p', 'double precision'), ('optimal_lag_days', 'integer'), ('lag_correlation', 'double precision'), ('fire_count', 'integer'), ('mean_frp', 'double precision'), ('mean_hcho', 'double precision'), ('created_at', 'timestamp with time zone')]
+- reports
+  Count: 4
+  Columns: [('id', 'bigint'), ('report_type', 'text'), ('title', 'text'), ('abstract', 'text'), ('content', 'jsonb'), ('pdf_path', 'text'), ('generated_at', 'timestamp with time zone'), ('status', 'text')]
+- india_boundaries
+  Count: 0
+  Columns: [('id', 'bigint'), ('boundary_type', 'text'), ('state_name', 'text'), ('district_name', 'text'), ('state_code', 'text'), ('geom', 'USER-DEFINED'), ('area_sq_km', 'double precision'), ('centroid_lat', 'double precision'), ('centroid_lon', 'double precision'), ('created_at', 'timestamp with time zone')]
+- meteorological_data
+  Count: 6138
+  Columns: [('id', 'bigint'), ('source', 'text'), ('observed_date', 'date'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('temperature_2m', 'double precision'), ('relative_humidity', 'double precision'), ('wind_speed_10m', 'double precision'), ('wind_direction', 'double precision'), ('u_wind_10m', 'double precision'), ('v_wind_10m', 'double precision'), ('u_wind_850hpa', 'double precision'), ('v_wind_850hpa', 'double precision'), ('pbl_height', 'double precision'), ('total_precipitation', 'double precision'), ('surface_pressure', 'double precision'), ('created_at', 'timestamp with time zone')]
+    Date column 'observed_date': min=2026-06-18, max=2026-06-18
+- fire_records
+  Count: 45
+  Columns: [('id', 'bigint'), ('source', 'text'), ('detected_at', 'timestamp with time zone'), ('detected_date', 'date'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('frp', 'double precision'), ('brightness', 'double precision'), ('confidence', 'integer'), ('satellite', 'text'), ('daynight', 'text'), ('state', 'text'), ('district', 'text'), ('fire_type', 'text'), ('created_at', 'timestamp with time zone')]
+    Date column 'detected_date': min=2026-06-23, max=2026-06-23
+- model_predictions
+  Count: 0
+  Columns: [('id', 'bigint'), ('model_name', 'text'), ('prediction_date', 'date'), ('latitude', 'double precision'), ('longitude', 'double precision'), ('geom', 'USER-DEFINED'), ('pm25_predicted', 'double precision'), ('no2_predicted', 'double precision'), ('so2_predicted', 'double precision'), ('co_predicted', 'double precision'), ('o3_predicted', 'double precision'), ('aqi_predicted', 'integer'), ('aqi_category', 'text'), ('confidence', 'double precision'), ('created_at', 'timestamp with time zone')]
+    Date column 'prediction_date': min=None, max=None
+- hcho_hotspots
+  Count: 0
+  Columns: [('id', 'bigint'), ('detection_method', 'text'), ('hotspot_date', 'date'), ('period_type', 'text'), ('period_start', 'date'), ('period_end', 'date'), ('cluster_id', 'integer'), ('centroid_lat', 'double precision'), ('centroid_lon', 'double precision'), ('centroid_geom', 'USER-DEFINED'), ('hotspot_geom', 'USER-DEFINED'), ('area_sq_km', 'double precision'), ('mean_hcho', 'double precision'), ('max_hcho', 'double precision'), ('percentile_rank', 'double precision'), ('z_score', 'double precision'), ('p_value', 'double precision'), ('pixel_count', 'integer'), ('region_name', 'text'), ('state', 'text'), ('season', 'text'), ('fire_association', 'boolean'), ('confidence', 'double precision'), ('created_at', 'timestamp with time zone')]
+    Date column 'hotspot_date': min=None, max=None

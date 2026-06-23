@@ -25,54 +25,51 @@ def initialize_gee():
     logger.info("Google Earth Engine initialized")
 
 
-# India geometry
-INDIA_GEOM = ee.Geometry.Rectangle([68.0, 6.0, 98.0, 38.0])
+def get_india_geom():
+    return ee.Geometry.Rectangle([68.0, 6.0, 98.0, 38.0])
 
 
 def get_tropomi_no2(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get TROPOMI NO₂ tropospheric column composite."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_NO2")
+        ee.ImageCollection("COPERNICUS/S5P/NRTI/L3_NO2")
         .filterDate(start_date, end_date)
         .filterBounds(geometry)
         .select("tropospheric_NO2_column_number_density")
-        .filter(ee.Filter.gt("PRODUCT_QUALITY", 0.75))
     )
     return collection.mean().clip(geometry)
 
 
 def get_tropomi_so2(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get TROPOMI SO₂ column composite."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_SO2")
+        ee.ImageCollection("COPERNICUS/S5P/NRTI/L3_SO2")
         .filterDate(start_date, end_date)
         .filterBounds(geometry)
         .select("SO2_column_number_density")
-        .filter(ee.Filter.gt("PRODUCT_QUALITY", 0.5))
     )
     return collection.mean().clip(geometry)
 
 
 def get_tropomi_co(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get TROPOMI CO column composite."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_CO")
+        ee.ImageCollection("COPERNICUS/S5P/NRTI/L3_CO")
         .filterDate(start_date, end_date)
         .filterBounds(geometry)
         .select("CO_column_number_density")
-        .filter(ee.Filter.gt("PRODUCT_QUALITY", 0.5))
     )
     return collection.mean().clip(geometry)
 
 
 def get_tropomi_o3(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get TROPOMI O₃ column composite."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_O3")
+        ee.ImageCollection("COPERNICUS/S5P/NRTI/L3_O3")
         .filterDate(start_date, end_date)
         .filterBounds(geometry)
         .select("O3_column_number_density")
@@ -82,13 +79,12 @@ def get_tropomi_o3(start_date: str, end_date: str, region=None) -> ee.Image:
 
 def get_tropomi_hcho(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get TROPOMI HCHO tropospheric column composite."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
-        ee.ImageCollection("COPERNICUS/S5P/OFFL/L3_HCHO")
+        ee.ImageCollection("COPERNICUS/S5P/NRTI/L3_HCHO")
         .filterDate(start_date, end_date)
         .filterBounds(geometry)
         .select("tropospheric_HCHO_column_number_density")
-        .filter(ee.Filter.gt("PRODUCT_QUALITY", 0.5))
     )
     return collection.mean().clip(geometry)
 
@@ -103,9 +99,9 @@ def extract_tropomi_to_grid(
 
     # Sample the image at grid points
     sample = image.sample(
-        region=INDIA_GEOM,
+        region=get_india_geom(),
         scale=scale,
-        numPixels=50000,
+        numPixels=4500,
         seed=42,
         geometries=True
     )
@@ -125,7 +121,7 @@ def extract_tropomi_to_grid(
 
 def get_modis_fire(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get MODIS active fire data from GEE."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
         ee.ImageCollection("MODIS/061/MOD14A1")
         .filterDate(start_date, end_date)
@@ -137,7 +133,7 @@ def get_modis_fire(start_date: str, end_date: str, region=None) -> ee.Image:
 
 def get_era5_wind(start_date: str, end_date: str, region=None) -> ee.Image:
     """Get ERA5 wind components from GEE."""
-    geometry = region or INDIA_GEOM
+    geometry = region or get_india_geom()
     collection = (
         ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
         .filterDate(start_date, end_date)
