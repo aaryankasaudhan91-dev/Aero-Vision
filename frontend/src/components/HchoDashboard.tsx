@@ -49,9 +49,9 @@ export const HchoDashboard: React.FC = () => {
       });
       if (overviewRes.data) {
         setMetrics({
-          avg_hcho: overviewRes.data.avg_hcho || 12.45,
-          hotspot_count: overviewRes.data.hotspot_count || 18,
-          highest_region: overviewRes.data.highest_region || 'Indo-Gangetic Plain',
+          avg_hcho: overviewRes.data.avg_hcho || 0,
+          hotspot_count: overviewRes.data.hotspot_count || 0,
+          highest_region: overviewRes.data.highest_region || 'N/A',
         });
       }
 
@@ -76,21 +76,8 @@ export const HchoDashboard: React.FC = () => {
 
     } catch (err) {
       console.error("Error fetching HCHO data:", err);
-      // Fallback
-      setHotspots([
-        { id: 1, centroid_lat: 29.5, centroid_lon: 75.3, mean_hcho: 18.2e-5, pixel_count: 14, region_name: 'Indo-Gangetic Plain' },
-        { id: 2, centroid_lat: 28.6, centroid_lon: 77.2, mean_hcho: 24.5e-5, pixel_count: 28, region_name: 'Delhi NCR' },
-        { id: 3, centroid_lat: 22.5, centroid_lon: 88.3, mean_hcho: 15.1e-5, pixel_count: 8, region_name: 'Northeast India' },
-      ]);
-      setTrends([
-        { date: '2026-06-16', hcho: 10.2e-5 },
-        { date: '2026-06-17', hcho: 11.5e-5 },
-        { date: '2026-06-18', hcho: 12.8e-5 },
-        { date: '2026-06-19', hcho: 13.1e-5 },
-        { date: '2026-06-20', hcho: 12.5e-5 },
-        { date: '2026-06-21', hcho: 12.1e-5 },
-        { date: '2026-06-22', hcho: 12.45e-5 },
-      ]);
+      setHotspots([]);
+      setTrends([]);
     } finally {
       setLoading(false);
     }

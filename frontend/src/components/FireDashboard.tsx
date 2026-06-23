@@ -37,10 +37,10 @@ export const FireDashboard: React.FC = () => {
       });
       if (overviewRes.data) {
         setMetrics({
-          fire_count: overviewRes.data.fire_count || 1420,
-          avg_frp: overviewRes.data.avg_frp || 45.2,
-          correlation_r: overviewRes.data.correlation_r || 0.72,
-          lag_days: overviewRes.data.lag_days || 1,
+          fire_count: overviewRes.data.fire_count || 0,
+          avg_frp: overviewRes.data.avg_frp || 0,
+          correlation_r: overviewRes.data.correlation_r || 0,
+          lag_days: overviewRes.data.lag_days || 0,
         });
       }
 
@@ -64,22 +64,8 @@ export const FireDashboard: React.FC = () => {
 
     } catch (err) {
       console.error("Error fetching Fire dashboard data:", err);
-      // Fallback
-      setFires([
-        { id: 1, latitude: 30.2, longitude: 74.8, frp: 85.5, source: 'MODIS' },
-        { id: 2, latitude: 29.8, longitude: 76.1, frp: 120.2, source: 'VIIRS' },
-        { id: 3, latitude: 25.1, longitude: 81.3, frp: 45.8, source: 'MODIS' },
-        { id: 4, latitude: 22.8, longitude: 85.5, frp: 35.1, source: 'VIIRS' },
-      ]);
-      setChartData([
-        { date: '06-16', fire_count: 320, hcho: 9.8 },
-        { date: '06-17', fire_count: 450, hcho: 11.2 },
-        { date: '06-18', fire_count: 680, hcho: 13.5 },
-        { date: '06-19', fire_count: 910, hcho: 15.2 },
-        { date: '06-20', fire_count: 850, hcho: 14.8 },
-        { date: '06-21', fire_count: 720, hcho: 13.1 },
-        { date: '06-22', fire_count: 780, hcho: 13.6 },
-      ]);
+      setFires([]);
+      setChartData([]);
     } finally {
       setLoading(false);
     }

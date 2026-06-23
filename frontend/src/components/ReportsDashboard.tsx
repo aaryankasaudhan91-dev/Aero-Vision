@@ -15,11 +15,7 @@ export const ReportsDashboard: React.FC = () => {
       setReports(res.data || []);
     } catch (err) {
       console.error("Error listing reports:", err);
-      // Fallback
-      setReports([
-        { id: 1, title: 'Annual HCHO Seasonal Climatology Report', report_type: 'comprehensive_report', created_at: '2026-06-20T10:00:00Z', file_path: 'reports/hcho_climatology.pdf' },
-        { id: 2, title: 'Surface AQI Estimation Using CNN-LSTM Models', report_type: 'scientific_paper', created_at: '2026-06-21T14:30:00Z', file_path: 'reports/aqi_estimation.pdf' },
-      ]);
+      setReports([]);
     } finally {
       setLoading(false);
     }
@@ -38,18 +34,7 @@ export const ReportsDashboard: React.FC = () => {
       fetchReports();
     } catch (err) {
       console.error("Error generating report:", err);
-      alert('Simulation: Research report generated and saved locally.');
-      // Append a mock generated report
-      setReports((prev) => [
-        {
-          id: Date.now(),
-          title,
-          report_type: reportType,
-          created_at: new Date().toISOString(),
-          file_path: 'reports/new_report.pdf',
-        },
-        ...prev,
-      ]);
+      alert('Error generating research report.');
     } finally {
       setGenerating(false);
     }

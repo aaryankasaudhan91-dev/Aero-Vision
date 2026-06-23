@@ -67,23 +67,8 @@ export const PollutantDashboard: React.FC = () => {
       setRanking(ranked);
     } catch (err) {
       console.error("Error fetching pollutant data:", err);
-      // Fallback
-      const key = selectedPollutant.toLowerCase().replace('.', '');
-      const mockItems = [
-        { id: 1, cpcb_stations: { station_name: 'Anand Vihar, Delhi', latitude: 28.6476, longitude: 77.3158 }, pm25: 180, pm10: 320, no2: 95, so2: 12, co: 4.2, o3: 65 },
-        { id: 2, cpcb_stations: { station_name: 'Bandra, Mumbai', latitude: 19.0596, longitude: 72.8295 }, pm25: 42, pm10: 85, no2: 32, so2: 8, co: 1.1, o3: 45 },
-        { id: 3, cpcb_stations: { station_name: 'Adyar, Chennai', latitude: 13.0012, longitude: 80.2565 }, pm25: 22, pm10: 48, no2: 18, so2: 5, co: 0.6, o3: 28 },
-        { id: 4, cpcb_stations: { station_name: 'Victoria Memorial, Kolkata', latitude: 22.5448, longitude: 88.3426 }, pm25: 65, pm10: 120, no2: 45, so2: 9, co: 1.8, o3: 52 },
-      ];
-      setDataList(mockItems);
-      setRanking(
-        mockItems
-          .map((item: any) => ({
-            name: item.cpcb_stations.station_name,
-            value: item[key] || 0,
-          }))
-          .sort((a, b) => b.value - a.value)
-      );
+      setDataList([]);
+      setRanking([]);
     } finally {
       setLoading(false);
     }

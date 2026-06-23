@@ -49,10 +49,10 @@ export const TransportDashboard: React.FC = () => {
       if (overviewRes.data && overviewRes.data.length > 0) {
         const item = overviewRes.data[0];
         setMetrics({
-          avg_speed: item.wind_speed || 8.4,
-          wind_dir: item.wind_direction || 245,
-          dist_km: item.transport_distance_km || 182.4,
-          primary_source: item.source_region || 'Punjab / Haryana',
+          avg_speed: item.wind_speed || 0,
+          wind_dir: item.wind_direction || 0,
+          dist_km: item.transport_distance_km || 0,
+          primary_source: item.source_region || 'N/A',
         });
       }
 
@@ -72,34 +72,15 @@ export const TransportDashboard: React.FC = () => {
 
     } catch (err) {
       console.error("Error fetching transport data:", err);
-      // Fallback
       setMetrics({
-        avg_speed: 12.5,
-        wind_dir: 290,
-        dist_km: 270.0,
-        primary_source: 'Punjab & Haryana',
+        avg_speed: 0,
+        wind_dir: 0,
+        dist_km: 0,
+        primary_source: 'N/A',
       });
-      setWindVectors([
-        { start: [31.0, 74.0], end: [29.5, 76.5], u: 10.2, v: -4.5, speed: 11.2 },
-        { start: [29.5, 76.5], end: [28.6, 77.2], u: 8.5, v: -3.8, speed: 9.3 },
-        { start: [28.6, 77.2], end: [27.0, 78.5], u: 7.2, v: -3.2, speed: 7.9 },
-      ]);
-      setRadarData([
-        { subject: 'North (N)', A: 20 },
-        { subject: 'Northeast (NE)', A: 10 },
-        { subject: 'East (E)', A: 5 },
-        { subject: 'Southeast (SE)', A: 15 },
-        { subject: 'South (S)', A: 10 },
-        { subject: 'Southwest (SW)', A: 85 },
-        { subject: 'West (W)', A: 95 },
-        { subject: 'Northwest (NW)', A: 70 },
-      ]);
-      setAttribution([
-        { region: 'Local Emissions', percentage: 25 },
-        { region: 'Punjab / Haryana', percentage: 45 },
-        { region: 'Western Thar Dust', percentage: 18 },
-        { region: 'Gangetic Basin', percentage: 12 },
-      ]);
+      setWindVectors([]);
+      setRadarData([]);
+      setAttribution([]);
     } finally {
       setLoading(false);
     }

@@ -222,7 +222,7 @@ class FIRMSIngestion:
                     continue
 
                 acq_date = f.get("acq_date", str(date.today()))
-                acq_time = f.get("acq_time", "0000")
+                acq_time = f.get("acq_time", "0000").zfill(4)
                 dt_str = f"{acq_date} {acq_time[:2]}:{acq_time[2:]}"
 
                 record = {

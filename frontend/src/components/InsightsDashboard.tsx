@@ -27,39 +27,8 @@ export const InsightsDashboard: React.FC = () => {
       setInsights(insightsRes.data || []);
     } catch (err) {
       console.error("Error fetching insights data:", err);
-      // Fallback
-      setSummary(
-        'Automated Remote Sensing analysis indicates a severe HCHO columns anomaly over Punjab and Haryana, ' +
-        'strongly correlating with seasonal residue crop burning active fires detected by MODIS/VIIRS. ' +
-        'Wind vectors at 850hPa suggest downwind transport towards Delhi NCR, triggering a prediction of ' +
-        'AQI exceeding 300 (Severe category) in the next 48 hours.'
-      );
-      setInsights([
-        {
-          id: 1,
-          insight_type: 'HCHO Anomaly',
-          severity: 'Critical',
-          region: 'Punjab & Haryana',
-          insight_text: 'Formaldehyde column density exceeds the 95th percentile climatological threshold (0.245 mol/m²). This spike is driven by agricultural residue burning.',
-          recommended_action: 'Alert local agricultural monitoring boards and prepare local healthcare facilities for incoming respiratory emergencies.',
-        },
-        {
-          id: 2,
-          insight_type: 'Transport Alert',
-          severity: 'Warning',
-          region: 'Delhi NCR',
-          insight_text: 'Strong northwest winds (12 m/s) at the 850hPa level are transporting the high HCHO and PM2.5 plume from the burning zones towards Delhi.',
-          recommended_action: 'Issue high pollution warnings to the public, advising children, elderly, and respiratory patients to limit outdoor activity.',
-        },
-        {
-          id: 3,
-          insight_type: 'AQI Prediction',
-          severity: 'Warning',
-          region: 'Indo-Gangetic Plain',
-          insight_text: 'ML Model predicts standard NAQI values to exceed 250 (Poor to Very Poor) across Uttar Pradesh, Bihar, and West Bengal due to high column values.',
-          recommended_action: 'Initiate the graded response action plan (GRAP) to restrict emissions from industrial zones and construction.',
-        },
-      ]);
+      setSummary('No active insights or alerts generated.');
+      setInsights([]);
     } finally {
       setLoading(false);
     }

@@ -52,7 +52,6 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     scene.background = new THREE.Color('#030712');
     scene.fog = new THREE.FogExp2('#030712', 0.02);
 
-    // Adjusted Camera to sit slightly lower for a more dramatic front-facing visual depth
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
     camera.position.set(0, -9.5, 13.5);
     camera.lookAt(0, 0, 0);
@@ -67,7 +66,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     const mapGroup = new THREE.Group();
     scene.add(mapGroup);
 
-    // Initial isometric view that favors the front-face outline of India
+    // Front-facing default isometric rotation matrix
     mapGroup.rotation.x = -Math.PI / 2.8;
 
     const shape = new THREE.Shape();
@@ -85,7 +84,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
 
     const extrudeSettings = {
       steps: 1,
-      depth: 0.4, // Slightly thicker extrusion for better perspective readability
+      depth: 0.4,
       bevelEnabled: true,
       bevelThickness: 0.04,
       bevelSize: 0.02,
@@ -178,7 +177,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     scene.add(ambientLight);
 
     const mainLight = new THREE.DirectionalLight('#ffffff', 1.5);
-    mainLight.position.set(2, 6, 15); // Shifted forward to brightly light up the map face
+    mainLight.position.set(2, 6, 15);
     mainLight.castShadow = true;
     scene.add(mainLight);
 
@@ -186,16 +185,10 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     rimLight.position.set(-8, -6, 2);
     scene.add(rimLight);
 
-    // Interaction & Animation states
+    // Interaction state variables
     let isDragging = false;
     let previousMousePosition = { x: 0, y: 0 };
     const rotationTarget = { x: -Math.PI / 2.8, y: 0 };
-    let clock = new THREE.Clock();
-
-    const handleMouseDown = (e: MouseEvent) => {
-      isDragging = true;
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
@@ -233,6 +226,10 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
       previousMousePosition = { x: e.clientX, y: e.clientY };
     };
 
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      previousMousePosition = { x: e.clientX, y: e.clientY };
+    };
     const handleMouseUp = () => { isDragging = false; };
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -256,21 +253,14 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     });
     resizeObserver.observe(container);
 
-    // Animation loop with structural scanning motion
+    // Completely Stable Frame Loop
     let animId: number;
     const renderLoop = () => {
       animId = requestAnimationFrame(renderLoop);
 
-      // Interpolate to smoothly catch up with mouse movements or automated paths
-      mapGroup.rotation.x += (rotationTarget.x - mapGroup.rotation.x) * 0.1;
-      mapGroup.rotation.y += (rotationTarget.y - mapGroup.rotation.y) * 0.1;
-
-      // Auto-moving: Gentle scanning effect instead of complete blind rotations
-      if (!isDragging) {
-        const elapsedTime = clock.getElapsedTime();
-        // Creates a sleek left-to-right scanning tilt so data bars are always optimally legible
-        rotationTarget.y = Math.sin(elapsedTime * 0.3) * 0.25;
-      }
+      // Interpolate for soft, fluid responses during user interactions
+      mapGroup.rotation.x += (rotationTarget.x - mapGroup.rotation.x) * 0.15;
+      mapGroup.rotation.y += (rotationTarget.y - mapGroup.rotation.y) * 0.15;
 
       renderer.render(scene, camera);
     };
@@ -311,10 +301,10 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
 
       <div className="absolute top-4 left-4 backdrop-blur-md bg-slate-900/60 border border-slate-800 p-3.5 rounded-xl pointer-events-none shadow-2xl">
         <div className="text-xs text-white font-semibold tracking-wide flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-cyan-400" />
           INDIA 3D OVERLAY
         </div>
-        <p className="text-[10px] text-slate-400 mt-1">Auto-scanning active • Drag to inspect • Scroll to zoom</p>
+        <p className="text-[10px] text-slate-400 mt-1">Drag map to pivot view • Scroll to zoom</p>
       </div>
 
       {tooltip.visible && (

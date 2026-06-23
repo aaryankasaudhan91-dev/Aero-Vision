@@ -51,10 +51,10 @@ export const AqiDashboard: React.FC = () => {
       });
       if (overviewRes.data) {
         setMetrics({
-          avg_aqi: overviewRes.data.avg_aqi || 142,
-          max_aqi: overviewRes.data.max_aqi || 312,
-          min_aqi: overviewRes.data.min_aqi || 45,
-          category: overviewRes.data.aqi_category || 'Moderate',
+          avg_aqi: overviewRes.data.avg_aqi || 0,
+          max_aqi: overviewRes.data.max_aqi || 0,
+          min_aqi: overviewRes.data.min_aqi || 0,
+          category: overviewRes.data.aqi_category || 'N/A',
         });
       }
 
@@ -83,22 +83,8 @@ export const AqiDashboard: React.FC = () => {
 
     } catch (err: any) {
       console.error("Error fetching AQI dashboard data:", err);
-      // Fail-safe default mock values for demo
-      setStations([
-        { id: '1', station_name: 'Anand Vihar, Delhi', latitude: 28.6476, longitude: 77.3158, aqi: 312, state: 'Delhi' },
-        { id: '2', station_name: 'Bandra, Mumbai', latitude: 19.0596, longitude: 72.8295, aqi: 85, state: 'Maharashtra' },
-        { id: '3', station_name: 'Adyar, Chennai', latitude: 13.0012, longitude: 80.2565, aqi: 48, state: 'Tamil Nadu' },
-        { id: '4', station_name: 'Victoria Memorial, Kolkata', latitude: 22.5448, longitude: 88.3426, aqi: 110, state: 'West Bengal' },
-      ]);
-      setTrends([
-        { date: '2026-06-16', aqi: 120 },
-        { date: '2026-06-17', aqi: 135 },
-        { date: '2026-06-18', aqi: 140 },
-        { date: '2026-06-19', aqi: 155 },
-        { date: '2026-06-20', aqi: 148 },
-        { date: '2026-06-21', aqi: 138 },
-        { date: '2026-06-22', aqi: 142 },
-      ]);
+      setStations([]);
+      setTrends([]);
     } finally {
       setLoading(false);
     }
@@ -220,10 +206,10 @@ export const AqiDashboard: React.FC = () => {
             <div className="h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[
-                  { name: 'Good', count: stations.filter(s => (s.aqi || 0) <= 50).length || 1 },
-                  { name: 'Satis.', count: stations.filter(s => (s.aqi || 0) > 50 && (s.aqi || 0) <= 100).length || 2 },
-                  { name: 'Mod.', count: stations.filter(s => (s.aqi || 0) > 100 && (s.aqi || 0) <= 200).length || 1 },
-                  { name: 'Poor', count: stations.filter(s => (s.aqi || 0) > 200).length || 0 }
+                  { name: 'Good', count: stations.filter(s => (s.aqi || 0) <= 50).length },
+                  { name: 'Satis.', count: stations.filter(s => (s.aqi || 0) > 50 && (s.aqi || 0) <= 100).length },
+                  { name: 'Mod.', count: stations.filter(s => (s.aqi || 0) > 100 && (s.aqi || 0) <= 200).length },
+                  { name: 'Poor', count: stations.filter(s => (s.aqi || 0) > 200).length }
                 ]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
