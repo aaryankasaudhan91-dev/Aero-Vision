@@ -29,7 +29,7 @@ class TransportService:
             query = supabase.table("meteorological_data").select(
                 "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
                 "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
-            ).eq("observed_date", str(current_query_date))
+            ).eq("observed_date", str(current_query_date)).not_is_null("u_wind_10m")
 
             result = query.limit(5000).execute()
             if result.data:
