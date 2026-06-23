@@ -43,10 +43,14 @@ class TransportService:
 
         vectors = []
         for r in data:
+            u = None
+            v = None
             if level == "850hpa":
                 u = r.get("u_wind_850hpa")
                 v = r.get("v_wind_850hpa")
-            else:
+            
+            # Fallback to 10m if level is 10m or 850hpa is null
+            if u is None or v is None:
                 u = r.get("u_wind_10m")
                 v = r.get("v_wind_10m")
 
@@ -90,7 +94,7 @@ class TransportService:
 
         while attempts < 10:
             met_data = supabase.table("meteorological_data").select(
-                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, wind_speed_10m"
+                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, u_wind_10m, v_wind_10m, wind_speed_10m"
             ).eq("observed_date", str(current_query_date)).limit(2000).execute()
 
             if met_data.data:
@@ -121,16 +125,23 @@ class TransportService:
                     best_dist = dist
                     best = obs
 
-            if best and best.get("u_wind_850hpa") and best.get("v_wind_850hpa"):
-                u = best["u_wind_850hpa"]
-                v = best["v_wind_850hpa"]
-                # Back-track: move opposite to wind direction
-                dt_hours = 1
-                dlat = -v * dt_hours * 3600 / 111000  # m/s to degrees
-                dlon = -u * dt_hours * 3600 / (111000 * math.cos(math.radians(current_lat)))
-                current_lat += dlat
-                current_lon += dlon
-                trajectory.append({"lat": round(current_lat, 4), "lon": round(current_lon, 4), "hour": -hour})
+            if best:
+                u = best.get("u_wind_850hpa")
+                v = best.get("v_wind_850hpa")
+                
+                # Fallback to 10m wind components
+                if u is None or v is None:
+                    u = best.get("u_wind_10m")
+                    v = best.get("v_wind_10m")
+
+                if u is not None and v is not None:
+                    # Back-track: move opposite to wind direction
+                    dt_hours = 1
+                    dlat = -v * dt_hours * 3600 / 111000  # m/s to degrees
+                    dlon = -u * dt_hours * 3600 / (111000 * math.cos(math.radians(current_lat)))
+                    current_lat += dlat
+                    current_lon += dlon
+                    trajectory.append({"lat": round(current_lat, 4), "lon": round(current_lon, 4), "hour": -hour})
 
         return {
             "receptor": {"lat": receptor_lat, "lon": receptor_lon},
