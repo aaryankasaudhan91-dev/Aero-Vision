@@ -29,7 +29,7 @@ class TransportService:
             query = supabase.table("meteorological_data").select(
                 "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
                 "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
-            ).eq("observed_date", str(current_query_date))
+            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
 
             result = query.limit(5000).execute()
             if result.data:
@@ -52,16 +52,6 @@ class TransportService:
             if u is None or v is None:
                 u = r.get("u_wind_10m")
                 v = r.get("v_wind_10m")
-
-            if u is None or v is None:
-                # Apply critical code fallback for missing meteorological records
-                # Generate synthetic wind flow based on coordinates
-                lat = r["latitude"]
-                lon = r["longitude"]
-                
-                # Synthetic North-Westerly flow pattern common over the region
-                u = 3.0 + 2.0 * math.sin(lat * 0.1) + math.cos(lon * 0.1)
-                v = -2.0 + math.sin(lon * 0.1)
 
             if u is not None and v is not None:
                 speed = math.sqrt(u ** 2 + v ** 2)
@@ -104,7 +94,7 @@ class TransportService:
         while attempts < 10:
             met_data = supabase.table("meteorological_data").select(
                 "latitude, longitude, u_wind_850hpa, v_wind_850hpa, u_wind_10m, v_wind_10m, wind_speed_10m"
-            ).eq("observed_date", str(current_query_date)).limit(2000).execute()
+            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null").limit(2000).execute()
 
             if met_data.data:
                 data = met_data.data
@@ -143,12 +133,6 @@ class TransportService:
                     u = best.get("u_wind_10m")
                     v = best.get("v_wind_10m")
 
-                if u is None or v is None:
-                    # Apply critical code fallback for missing meteorological records
-                    # Generate synthetic wind flow
-                    u = 3.0 + 2.0 * math.sin(current_lat * 0.1) + math.cos(current_lon * 0.1)
-                    v = -2.0 + math.sin(current_lon * 0.1)
-
                 if u is not None and v is not None:
                     # Back-track: move opposite to wind direction
                     dt_hours = 1
@@ -157,6 +141,10 @@ class TransportService:
                     current_lat += dlat
                     current_lon += dlon
                     trajectory.append({"lat": round(current_lat, 4), "lon": round(current_lon, 4), "hour": -hour})
+                else:
+                    break
+            else:
+                break
 
         return {
             "receptor": {"lat": receptor_lat, "lon": receptor_lon},

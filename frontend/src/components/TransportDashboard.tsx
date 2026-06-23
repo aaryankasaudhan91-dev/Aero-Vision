@@ -34,6 +34,7 @@ export const TransportDashboard: React.FC = () => {
     primary_source: 'N/A',
   });
   const [windVectors, setWindVectors] = useState<any[]>([]);
+  const [trajectory, setTrajectory] = useState<any[]>([]);
   const [radarData, setRadarData] = useState<any[]>([]);
   const [attribution, setAttribution] = useState<any[]>([]);
 
@@ -71,16 +72,7 @@ export const TransportDashboard: React.FC = () => {
         }));
         setRadarData(formattedRadar);
       } else {
-        setRadarData([
-          { subject: 'N', A: 10 },
-          { subject: 'NE', A: 15 },
-          { subject: 'E', A: 20 },
-          { subject: 'SE', A: 5 },
-          { subject: 'S', A: 5 },
-          { subject: 'SW', A: 10 },
-          { subject: 'W', A: 25 },
-          { subject: 'NW', A: 10 },
-        ]);
+        setRadarData([]);
       }
 
       // 2. Get Overview Metrics
@@ -133,7 +125,7 @@ export const TransportDashboard: React.FC = () => {
         });
       }
 
-      // Mock or fetch source attribution for bar chart
+      // Fetch source attribution for bar chart
       const attributionRes = await transportApi.getSourceAttribution({
         receptor_lat: 28.6139,
         receptor_lon: 77.2090,
@@ -142,6 +134,7 @@ export const TransportDashboard: React.FC = () => {
 
       const trajData = attributionRes.data;
       if (trajData && trajData.trajectory && trajData.trajectory.length > 0) {
+        setTrajectory(trajData.trajectory);
         const counts: Record<string, number> = {};
         trajData.trajectory.forEach((pt: any) => {
           let reg = 'Local NCR';
@@ -160,11 +153,8 @@ export const TransportDashboard: React.FC = () => {
 
         setAttribution(mapped);
       } else {
-        setAttribution([
-          { region: 'Local NCR', percentage: 70 },
-          { region: 'Haryana', percentage: 20 },
-          { region: 'Uttar Pradesh', percentage: 10 }
-        ]);
+        setTrajectory([]);
+        setAttribution([]);
       }
 
     } catch (err) {
@@ -176,6 +166,7 @@ export const TransportDashboard: React.FC = () => {
         primary_source: 'N/A',
       });
       setWindVectors([]);
+      setTrajectory([]);
       setRadarData([]);
       setAttribution([]);
     } finally {
@@ -260,18 +251,25 @@ export const TransportDashboard: React.FC = () => {
           <div className="flex-1 rounded-xl overflow-hidden relative">
             <IndiaMap3D
               points={[
-                { latitude: 28.6139, longitude: 77.2090, value: 30, label: 'Receptor: Delhi NCR', state: 'Delhi' },
-                ...windVectors.map((vec: any) => {
-                  return {
-                    latitude: vec.lat,
-                    longitude: vec.lon,
-                    value: vec.speed || 10,
-                    label: `Wind Direction: ${vec.direction}° (${vec.speed} m/s)`,
-                    state: 'Meteorological Grid',
-                  };
-                }).filter((p: any) => p.latitude && p.longitude)
+                { latitude: 28.6139, longitude: 77.2090, value: 35, label: 'Receptor: Delhi NCR', state: 'Delhi', color: '#a855f7' },
+                ...trajectory.map((pt: any) => ({
+                  latitude: pt.lat,
+                  longitude: pt.lon,
+                  value: 15,
+                  label: `Trajectory point: hour ${pt.hour} (${pt.lat}, ${pt.lon})`,
+                  state: 'Back-Trajectory',
+                  color: '#fbbf24'
+                })),
+                ...windVectors.filter((_, idx) => idx % 25 === 0).map((vec: any) => ({
+                  latitude: vec.lat,
+                  longitude: vec.lon,
+                  value: vec.speed || 10,
+                  label: `Wind Grid: ${vec.direction}° (${vec.speed} m/s)`,
+                  state: 'Meteorological Grid',
+                  color: '#06b6d4'
+                })).filter((p: any) => p.latitude && p.longitude)
               ]}
-              dataType="fire"
+              dataType="pollutant"
             />
           </div>
         </div>

@@ -166,8 +166,8 @@ class TransportAnalyzer:
         """Analyze pollutant transport using ERA5 wind fields."""
         met_result = supabase.table("meteorological_data").select(
             "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
-            "wind_speed_10m, wind_direction"
-        ).eq("observed_date", analysis_date).limit(5000).execute()
+            "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
+        ).eq("observed_date", analysis_date).not_.is_("u_wind_10m", "null").limit(5000).execute()
 
         met_data = met_result.data or []
         if not met_data:
@@ -184,9 +184,13 @@ class TransportAnalyzer:
             if not region_met:
                 continue
 
-            # Average wind in region
+            # Average wind in region (fallback to 10m wind if 850hpa is missing)
             u_vals = [m.get("u_wind_850hpa") for m in region_met if m.get("u_wind_850hpa") is not None]
             v_vals = [m.get("v_wind_850hpa") for m in region_met if m.get("v_wind_850hpa") is not None]
+
+            if not u_vals or not v_vals:
+                u_vals = [m.get("u_wind_10m") for m in region_met if m.get("u_wind_10m") is not None]
+                v_vals = [m.get("v_wind_10m") for m in region_met if m.get("v_wind_10m") is not None]
 
             if not u_vals or not v_vals:
                 continue

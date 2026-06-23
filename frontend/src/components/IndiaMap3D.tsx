@@ -127,23 +127,27 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({ points, dataType }) => {
     points.forEach((pt) => {
       const p = project(pt.longitude, pt.latitude);
       let normalizedHeight = 0.5;
-      let barColor = '#10b981';
+      let barColor = pt.color || '#10b981';
 
-      if (dataType === 'aqi') {
-        normalizedHeight = Math.min((pt.value / 400) * 3, 3.5);
-        if (pt.value > 300) barColor = '#a855f7';
-        else if (pt.value > 200) barColor = '#ef4444';
-        else if (pt.value > 100) barColor = '#f97316';
-        else if (pt.value > 50) barColor = '#eab308';
-      } else if (dataType === 'hcho') {
-        normalizedHeight = Math.min((pt.value / 25) * 3, 3.5);
-        barColor = pt.value > 15 ? '#ec4899' : '#6366f1';
-      } else if (dataType === 'fire') {
-        normalizedHeight = Math.min((pt.value / 300) * 3.5, 4);
-        barColor = pt.value > 150 ? '#f43f5e' : '#f97316';
+      if (!pt.color) {
+        if (dataType === 'aqi') {
+          normalizedHeight = Math.min((pt.value / 400) * 3, 3.5);
+          if (pt.value > 300) barColor = '#a855f7';
+          else if (pt.value > 200) barColor = '#ef4444';
+          else if (pt.value > 100) barColor = '#f97316';
+          else if (pt.value > 50) barColor = '#eab308';
+        } else if (dataType === 'hcho') {
+          normalizedHeight = Math.min((pt.value / 25) * 3, 3.5);
+          barColor = pt.value > 15 ? '#ec4899' : '#6366f1';
+        } else if (dataType === 'fire') {
+          normalizedHeight = Math.min((pt.value / 300) * 3.5, 4);
+          barColor = pt.value > 150 ? '#f43f5e' : '#f97316';
+        } else {
+          normalizedHeight = Math.min((pt.value / 150) * 3, 3.5);
+          barColor = pt.value > 75 ? '#ef4444' : '#06b6d4';
+        }
       } else {
         normalizedHeight = Math.min((pt.value / 150) * 3, 3.5);
-        barColor = pt.value > 75 ? '#ef4444' : '#06b6d4';
       }
 
       const barGeometry = new THREE.CylinderGeometry(radius, radius, normalizedHeight, 16);
