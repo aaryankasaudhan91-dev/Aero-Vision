@@ -1,202 +1,338 @@
-# 🛰️ Project AeroVision: Surface AQI & HCHO Hotspots over India
+<h1 align="center">
+  <br/>
+  🛰️ AeroVision
+  <br/>
+</h1>
 
-[![Vite Build](https://img.shields.io/badge/Vite-Build%20Success-green?logo=vite)](https://vitejs.dev)
-[![FastAPI](https://img.shields.io/badge/FastAPI-v0.115-blue?logo=fastapi)](https://fastapi.tiangolo.com)
-[![PostgreSQL/PostGIS](https://img.shields.io/badge/Database-PostgreSQL%2FPostGIS-blue?logo=postgresql)](https://postgis.net/)
-[![Python ML/DL](https://img.shields.io/badge/Models-RandomForest%20%7C%20XGBoost%20%7C%20CNN--LSTM-orange?logo=python)](https://pytorch.org/)
+<h4 align="center">
+  India's Premier Geospatial Atmospheric Intelligence Platform
+</h4>
 
-An advanced Remote Sensing & Deep Learning system to estimate **Surface AQI** and detect **Formaldehyde (HCHO) Hotspots** across India using multi-satellite products, meteorological reanalysis, and ground-truth CAQMS monitoring.
+<p align="center">
+  <img alt="Version" src="https://img.shields.io/badge/Version-1.2.0-7c3aed?style=flat-square"/>
+  <img alt="FastAPI" src="https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi"/>
+  <img alt="React" src="https://img.shields.io/badge/Frontend-React%2019-61dafb?style=flat-square&logo=react"/>
+  <img alt="TailwindCSS" src="https://img.shields.io/badge/Styling-Tailwind%20v4-06b6d4?style=flat-square&logo=tailwindcss"/>
+  <img alt="Supabase" src="https://img.shields.io/badge/Database-Supabase-3ecf8e?style=flat-square&logo=supabase"/>
+  <img alt="Status" src="https://img.shields.io/badge/Status-Live%20Production-10b981?style=flat-square"/>
+</p>
 
----
-
-## 📖 Table of Contents
-1. [Executive Summary](#-executive-summary)
-2. [Scientific Methodology & Mathematical Formulations](#-scientific-methodology--mathematical-formulations)
-3. [System Architecture](#-system-architecture)
-4. [Database Design](#-database-design)
-5. [API Documentation](#-api-documentation)
-6. [3D Map Visualizations (WebGL/Three.js)](#-3d-map-visualizations-webglthreejs)
-7. [Installation & Setup](#-installation--setup)
-8. [Production Optimization & Troubleshooting](#-production-optimization--troubleshooting)
-
----
-
-## 🧠 Executive Summary
-
-### The Challenge
-Ground-level Air Quality Index (AQI) monitoring in India is limited to approximately **500 Continuous Ambient Air Quality Monitoring Stations (CAAQMS)** under the CPCB. Over 80% of India's population lives in suburban or rural areas situated more than **100 km away** from the nearest ground station. This spatial gap masks the severe exposure risks faced by rural communities, particularly during seasonal agricultural residue burning (stubble burning) in northwest India and forest fires in northeast India.
-
-### The Solution: AeroVision
-Project AeroVision resolves this monitoring gap by utilizing high-resolution satellite remote sensing to interpolate ground observations:
-* **Hybrid Surface Estimation:** Predicts surface-level criteria pollutants ($PM_{2.5}, NO_2, SO_2, CO, O_3$) at $0.1^\circ \times 0.1^\circ$ (~10 km) daily resolution using a customized **CNN-LSTM** model trained on **INSAT-3D AOD** and **Sentinel-5P TROPOMI** column densities.
-* **HCHO Hotspot Tracking:** Detects **Formaldehyde (HCHO)** (a key Volatile Organic Compound indicator) using spatial autocorrelation (**Getis-Ord $Gi^*$** and **Local Moran's I**) to identify emission source zones.
-* **Fire & Transport Coupling:** Correlates NASA **MODIS/VIIRS Fire Radiative Power (FRP)** with HCHO columns with a 1–3 day lag, tracing transport pathways using **ERA5 wind vectors** with fallback models for 10m surface winds.
+<p align="center">
+  AeroVision is a full-stack, real-time geospatial intelligence platform for atmospheric monitoring, air quality analysis, and public health risk assessment across the Indian subcontinent. It fuses satellite telemetry (NASA FIRMS, ESA TROPOMI/Sentinel-5P), CPCB ground sensor networks, and AI/ML models into a single premium command-center interface.
+</p>
 
 ---
 
-## 🔬 Scientific Methodology & Mathematical Formulations
+## ✨ Features at a Glance
 
-```mermaid
-graph TD
-    A[Satellite & Model Data] --> D[Data Preprocessor]
-    B[Ground Truth CAQMS] --> D
-    C[ERA5 Meteorology] --> D
-    D -->|Spatial-Temporal Merge| E[Feature Store]
-    E --> F[Hybrid CNN-LSTM Model]
-    E --> G[XGBoost & Random Forest]
-    F -->|Surface Prediction| H[AQI Calculation]
-    I[TROPOMI HCHO] --> J[Getis-Ord Gi* Statistics]
-    J --> K[DBSCAN Clustering]
-    K -->|Hotspot Detection| L[Fire-HCHO Correlation]
-    M[MODIS/VIIRS FRP] --> L
-    N[ERA5 Wind Vectors] --> O[Transport Pathways]
-```
-
-### 1. Data Processing & Masking
-* **Cloud Masking:** Satellite pixels with a cloud fraction $> 0.3$ or TROPOMI Quality Assurance ($QA$) value $< 0.75$ are automatically masked to prevent retrieval biases.
-* **Spatial Harmonization:** All coordinates are projected onto a standard Indian grid boundary ($8^\circ\text{N}–38^\circ\text{N}$, $68^\circ\text{E}–98^\circ\text{E}$) with $0.1^\circ$ spacing using **Kriging interpolation** for gaps.
-
-### 2. Hybrid CNN-LSTM Architecture
-* **Spatial Feature Extraction (CNN):** A $7 \times 7$ grid of satellite parameters surrounding a grid point is processed via 2D Convolutional layers.
-* **Temporal Dependency (LSTM):** Modulates the previous 7 days of meteorological factors ($PBLH, RH, Temp$) to model the accumulation and dispersion of pollutants.
-
-### 3. Spatial Statistics for Hotspot Detection
-* **Getis-Ord $Gi^*$ Statistic:** Identifies statistically significant spatial clusters of high HCHO concentrations:
-  $$G_i^* = \frac{\sum_{j=1}^n w_{ij} x_j - \bar{X}\sum_{j=1}^n w_{ij}}{S \sqrt{\frac{n\sum_{j=1}^n w_{ij}^2 - (\sum_{j=1}^n w_{ij})^2}{n-1}}}$$
-  *Where $w_{ij}$ represents spatial weights, $x_j$ represents HCHO value at location $j$, $\bar{X}$ is the mean, and $S$ is the standard deviation.*
-* **DBSCAN Clustering:** Segregates diffuse regional plumes from dense point-source hotspots using search radius parameters ($\varepsilon = 50\text{ km}$, $\text{min\_samples} = 5$).
-
-### 4. Wind-Based Pollutant Transport & Back-Trajectories
-AeroVision analyzes regional transport using wind vector fields derived from ERA5 reanalysis data:
-* **Lagrangian Back-Trajectory Tracking:** Evaluates the source region of pollutants by backtracking the path of an air parcel starting from a receptor station (such as Delhi NCR). The tracking algorithm backsteps hour-by-hour:
-  $$\text{Lat}_{t-1} = \text{Lat}_t - \left( v \times \Delta t \times \frac{360^\circ}{2\pi R} \right)$$
-  $$\text{Lon}_{t-1} = \text{Lon}_t - \left( u \times \Delta t \times \frac{360^\circ}{2\pi R \cos(\text{Lat}_t)} \right)$$
-  *Where $u$ and $v$ are the zonal and meridional wind components (m/s), $\Delta t = 3600\text{ s}$ (1 hour), and $R$ is the Earth's radius.*
-* **Wind Vector Fallback Hierarchy:** In order to avoid missing calculations due to data gaps (without introducing synthetic/mock vectors), the system prioritizes ERA5 **850 hPa winds** (geostrophic layer) and seamlessly falls back to **10m surface winds** if 850 hPa is null.
+| Module | Description |
+|---|---|
+| 🌍 **AQI Overview** | National air quality index coverage from 29 real CPCB ground stations with spatial interpolation maps |
+| 📊 **Pollutant Maps** | Per-pollutant concentration charts for PM2.5, PM10, NO2, SO2, CO, O3 against CPCB NAQI safety limits |
+| 🏥 **Health Impact System** | Real-time public health exposure risk scoring (0–100) combining AQI, active fires, and HCHO column density |
+| 🔥 **HCHO Hotspots** | TROPOMI satellite HCHO column density anomaly detection using DBSCAN, Getis-Ord Gi* and Moran's I algorithms |
+| 🛰️ **Fire Correlation** | NASA FIRMS active fire radiative power (FRP) data with HCHO emission correlation and Pearson coefficient analysis |
+| 💨 **Transport Analysis** | Wind vector field visualization, Lagrangian back-trajectory analysis, and inter-regional pollutant source attribution |
+| 🌦️ **Weather Dynamics** | 7-day FourCastNet AI weather forecasts with boundary layer height, temperature, wind and humidity grid layers |
+| 🧠 **AI Insights** | Google Gemini-powered automated scientific anomaly detection, executive summaries, and domain-specific alerts |
+| 📝 **Research Reports** | Peer-quality PDF scientific reports with watermark, auto-generated sections, and instant download |
+| 🔄 **Real-Time Sync** | 15-second auto-refresh engine with live API latency tracking and "Last Sync" elapsed counter in the header |
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture
 
 ```
-├── backend/
+aero-vision/
+├── backend/                        # Python FastAPI service
 │   ├── app/
-│   │   ├── geospatial/     # GEE, wind vector, and PostGIS utils
-│   │   ├── ml/             # RF, XGBoost, CNN-LSTM model definitions
-│   │   ├── pipelines/      # Data ingestion & cleaning
-│   │   ├── routers/        # FastAPI endpoint definitions
-│   │   ├── services/       # Core business logic (AQI, HCHO, reports)
-│   │   ├── database.py     # SQLAlchemy & Supabase connectors
-│   │   └── main.py         # App entrypoint
-│   └── supabase/           # PostGIS schema migrations
-└── frontend/
+│   │   ├── main.py                 # FastAPI entrypoint & CORS config
+│   │   ├── config.py               # Settings & environment management
+│   │   ├── database.py             # Supabase async client
+│   │   ├── schemas.py              # Pydantic request/response models
+│   │   ├── routers/                # REST API endpoints
+│   │   │   ├── aqi.py              # AQI surface observations
+│   │   │   ├── hcho.py             # TROPOMI HCHO satellite data
+│   │   │   ├── fire.py             # NASA FIRMS active fires
+│   │   │   ├── transport.py        # Wind vector & trajectory
+│   │   │   ├── weather.py          # FourCastNet forecast grids
+│   │   │   ├── insights.py         # AI-generated alerts
+│   │   │   └── reports.py          # PDF report generation
+│   │   ├── services/               # Business logic & DB queries
+│   │   │   ├── aqi_service.py
+│   │   │   ├── hcho_service.py
+│   │   │   ├── fire_service.py
+│   │   │   ├── transport_service.py
+│   │   │   ├── fourcastnet_service.py
+│   │   │   ├── insights_service.py
+│   │   │   └── report_service.py
+│   │   ├── ml/                     # ML model training & inference
+│   │   ├── geospatial/             # Spatial analysis utilities
+│   │   └── pipelines/              # Data ingestion pipelines
+│   └── requirements.txt
+│
+└── frontend/                       # React + Vite + TypeScript SPA
     ├── src/
-    │   ├── components/     # Beautiful Glassmorphism Dashboards
-    │   │   ├── IndiaMap3D.tsx        # WebGL 3D Map Component
-    │   │   ├── TransportDashboard.tsx # Transport analytics
-    │   │   └── ...
-    │   ├── services/       # Axios API layer
-    │   └── App.tsx         # Dashboard assembly
+    │   ├── App.tsx                 # Root app, routing, real-time sync engine
+    │   ├── components/
+    │   │   ├── Sidebar.tsx         # Navigation sidebar with collapse/expand
+    │   │   ├── AqiDashboard.tsx    # AQI overview view
+    │   │   ├── PollutantDashboard.tsx
+    │   │   ├── HealthDashboard.tsx # Health Impact Early Warning System
+    │   │   ├── HchoDashboard.tsx
+    │   │   ├── FireDashboard.tsx
+    │   │   ├── TransportDashboard.tsx
+    │   │   ├── WeatherDashboard.tsx
+    │   │   ├── InsightsDashboard.tsx
+    │   │   ├── ReportsDashboard.tsx
+    │   │   ├── IndiaMap.tsx        # 2D/3D map switcher
+    │   │   ├── IndiaMap2D.tsx      # Leaflet map with IDW interpolation
+    │   │   ├── IndiaMap3D.tsx      # Three.js 3D globe render
+    │   │   └── FilterBar.tsx
+    │   └── services/
+    │       └── api.ts              # Centralized Axios client + latency events
+    └── package.json
 ```
 
 ---
 
-## 🗄️ Database Design
+## 🗺️ Mapping Engine
 
-AeroVision leverages **PostgreSQL** with the **PostGIS** extension to support rapid geo-spatial queries (e.g., nearest-station queries and trajectory line strings).
+The `IndiaMap2D` component renders a full interactive Leaflet map locked to the Indian subcontinent (`maxBounds: [[5.0, 65.0], [38.5, 99.0]]`) using the CARTO Voyager light tile layer. It supports:
 
-### Primary Schema Tables
-1. `cpcb_stations`: Ground monitor stations, coordinates, types, and geometries.
-2. `cpcb_observations`: Ground truth air quality logs ($PM_{2.5}, NO_2, SO_2, CO, O_3$, and AQI values).
-3. `satellite_aod`: Daily INSAT-3D Aerosol Optical Depth ($550\text{ nm}$).
-4. `tropomi_products`: High-resolution Sentinel-5P column density variables ($HCHO, NO_2, SO_2, CO$).
-5. `meteorological_data`: ERA5 reanalysis fields ($U/V$ wind components at 10m and 850 hPa, temperature, PBLH, humidity).
-6. `fire_records`: MODIS & VIIRS thermal anomalies with Fire Radiative Power (FRP).
-7. `model_predictions`: Predicted concentrations and estimated surface AQI.
-8. `hcho_hotspots`: Multi-polygon clusters indicating spatial anomalies.
-9. `fire_hcho_correlations`: Pearson/Spearman correlation metrics, lag times, and FRP summaries.
-10. `transport_analysis`: Regional daily transport speed, direction, distance, and vector fields.
+- **Smooth mode** — pure IDW-interpolated continuous raster overlay (50×50 canvas pixel grid)
+- **Hybrid mode** — overlay combined with station markers (default)
+- **Grid mode** — raw observation points only
+- **Wind arrows** — rotated SVG direction arrows sized by wind speed
+- **Tooltips** — station name, state, measured value, wind speed & direction
 
-*PL/pgSQL Triggers are implemented to automatically compute and synchronize PostGIS geometries (`geom` and `centroid_geom`) on inserts/updates.*
+The 3D globe (`IndiaMap3D`) is powered by Three.js with an orthographic projection and animated orbit controls.
 
 ---
 
-## 🔌 API Documentation
+## 🏥 Health Impact Early Warning System
 
-All backend endpoints are built using **FastAPI** with auto-generated OpenAPI docs available at `/docs`.
+A flagship feature that calculates a **composite health exposure risk score (0–100)** for every CPCB-monitored city in real time:
 
-### AQI Endpoints (`/api/aqi`)
-* `GET /api/aqi/overview`: Retrieves country-wide mean/max/min AQI and CPCB ground observations.
-* `GET /api/aqi/stations`: Returns list of monitored ground stations and activation status.
-* `GET /api/aqi/trends`: Returns historical daily time-series.
-* `GET /api/aqi/predictions`: Returns CNN-LSTM predicted future AQI values.
+```
+Risk Score = base_aqi_risk(AQI) + fire_modifier(active_fires_in_state)
+```
 
-### Transport Endpoints (`/api/transport`)
-* `GET /api/transport/`: Returns calculated regional transport records from `transport_analysis`.
-* `GET /api/transport/wind-vectors`: Fetches wind vector coordinates ($u$, $v$, speed, direction) for the spatial grid.
-* `GET /api/transport/pathways`: Returns transport path logs between date boundaries.
-* `GET /api/transport/source-attribution`: Calculates receptor backtracking coordinates (`trajectory`) and source zone percentages.
+Where:
+- `base_aqi_risk` maps the 0–500 AQI scale to a 0–100 risk index using tiered linear interpolation
+- `fire_modifier` adds up to +10 points based on the count of NASA FIRMS active fires in the same state
+- Scores are color-coded: 🟢 Good → 🟡 Moderate → 🟠 Severe → 🔴 Critical
 
----
-
-## 🗺️ 3D Map Visualizations (WebGL/Three.js)
-
-The application provides a premium, interactive **3D WebGL Map** of India using **Three.js** inside `IndiaMap3D.tsx`:
-* **Geometry Extrusion:** Extrudes the Indian boundary polygon to create a stylized glassmorphic 3D base.
-* **Spatial Data Bars:** Renders 3D cylinders at data coordinate points. Height represents the pollutant concentration or value, and glowing sphere markers are placed on top.
-* **Trajectory Mapping:** Displays back-trajectory path coordinates on the map.
-* **Performance Subsampling:** Subsamples dense coordinates (such as the 1000-point wind vector grid) using a modulo filter (`index % 25 === 0`) to prevent WebGL frame rate drops, ensuring 60fps interaction speed.
+The dashboard surfaces:
+- **Hero Alert Banner** — flashes when any station exceeds risk score 70
+- **Critical Exposure Zones** — top 5 most impacted cities with animated progress bars
+- **Radial Gauge Widgets** — Respiratory Stress Index & Satellite Anomaly Index
+- **Sensitive Group Advisories** — Asthma/COPD, Pediatric Care, Senior Citizens
+- **Spatial Map** — geographic health risk distribution across India
+- **30-Day Trend Chart** — Recharts area graph of population exposure trajectory
 
 ---
 
-## ⚙️ Installation & Setup
+## ⚡ Real-Time Sync Engine
+
+All data panels refresh automatically without requiring a page reload:
+
+1. **Axios Interceptor Timing** — every API request records `Date.now()` at dispatch and calculates round-trip duration on response, broadcasting it via a custom `api-latency` DOM event.
+2. **Live Header Indicators** — the app header shows the actual measured `Server Latency` (e.g. `14ms`) and a "Last Sync" counter that ticks (`Just Now` → `5s ago` → `1m 3s ago`) and resets on every fresh data load.
+3. **Auto-Refresh Toggle** — a pill toggle in the header dispatches a `refresh-active-dashboard` event every **15 seconds** to all mounted dashboard components, which silently re-fetch their data in the background.
+
+---
+
+## 🔧 Tech Stack
+
+### Backend
+| Layer | Technology |
+|---|---|
+| API Framework | FastAPI 0.115 + Uvicorn |
+| Language | Python 3.11+ |
+| Database | Supabase (PostgreSQL + PostGIS) |
+| Geospatial | GeoPandas, Rasterio, Shapely, pyproj, GEE |
+| ML/AI | scikit-learn, XGBoost, TensorFlow, PyTorch |
+| Data Ingestion | NASA FIRMS, CDS/ERA5, TROPOMI/Sentinel-5P |
+| Spatial Stats | PySAL (libpysal, esda — DBSCAN, Getis-Ord, Moran's I) |
+| PDF | ReportLab |
+| Logging | Loguru |
+
+### Frontend
+| Layer | Technology |
+|---|---|
+| Framework | React 19 + TypeScript |
+| Build Tool | Vite 8 |
+| Styling | Tailwind CSS v4 |
+| Maps | Leaflet + react-leaflet (2D), Three.js (3D) |
+| Charts | Recharts (Area, Line, Bar, Radar) |
+| HTTP Client | Axios with interceptor-level latency tracking |
+| Design System | Atmospheric Intelligence (Stitch — glassmorphic dark theme) |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-* Python 3.10+
-* Node.js 18+
-* PostgreSQL + PostGIS (or a Supabase project)
+- Python 3.11+
+- Node.js 20+
+- A Supabase project (URL + anon key)
+- Google Earth Engine service account credentials
 
-### 1. Backend Setup
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/aero-vision.git
+cd aero-vision
+```
+
+### 2. Backend Setup
+
 ```bash
 cd backend
+
+# Create and activate virtual environment
 python -m venv venv
-source venv/Scripts/activate  # On Windows: venv\Scripts\activate
+.\venv\Scripts\activate          # Windows
+source venv/bin/activate         # macOS/Linux
+
+# Install dependencies
 pip install -r requirements.txt
-```
-Copy `.env.example` to `.env` and fill in credentials:
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-role-key
-DATABASE_URL=postgresql://postgres:password@db.your-project.supabase.co:5432/postgres
-GEE_SERVICE_ACCOUNT_PATH=./credentials/gee-service-account.json
-```
-Run migrations:
-```bash
-# Execute supabase/schema.sql and schema_part2.sql on your database console.
-```
-Start development server:
-```bash
-python -m app.main
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your Supabase URL, keys, and API credentials
+
+# Start the API server
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 2. Frontend Setup
+The API will be available at:
+- **Swagger UI**: http://127.0.0.1:8000/api/docs
+- **ReDoc**: http://127.0.0.1:8000/api/redoc
+- **Health Check**: http://127.0.0.1:8000/api/health
+
+### 3. Frontend Setup
+
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Configure environment
+cp .env.example .env
+# Set VITE_API_BASE_URL=http://localhost:8000/api
+
+# Start dev server
 npm run dev
 ```
 
+The frontend will be available at: **http://localhost:5173**
+
+### 4. Production Build
+
+```bash
+cd frontend
+npm run build
+# Output is in /dist
+```
+
 ---
 
-## 🛠️ Production Optimization & Troubleshooting
+## 🌐 API Endpoints
 
-### PostgREST Pagination & Limit Caps
-By default, Supabase (PostgREST) caps query responses to **1000 records** per page. 
-* **The Issue:** When retrieving meteorological wind vectors (6,138 records per day), the API only fetched the first 1000 records. Because these first records happened to have null wind components, the client did not receive any wind data, resulting in blank maps.
-* **The Solution:** We eliminated the query constraint by applying filter operations directly inside the Supabase client query. By executing `.not_.is_("u_wind_10m", "null")`, the server automatically skips null rows and returns 1000 valid records containing active measurements.
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/aqi/` | AQI overview with observations for a date/state |
+| `GET` | `/api/aqi/stations` | Active CPCB monitoring stations |
+| `GET` | `/api/aqi/observations` | Raw ground sensor observations |
+| `GET` | `/api/aqi/trends` | AQI time-series for charts |
+| `GET` | `/api/hcho/` | HCHO hotspot overview |
+| `GET` | `/api/hcho/hotspots` | Spatial anomaly cluster data |
+| `GET` | `/api/hcho/trends` | HCHO column density trends |
+| `GET` | `/api/fire/` | Active fire overview |
+| `GET` | `/api/fire/records` | NASA FIRMS fire detections |
+| `GET` | `/api/fire/correlation` | Fire ↔ HCHO correlation analysis |
+| `GET` | `/api/transport/wind-vectors` | ERA5 wind field grid |
+| `GET` | `/api/transport/source-attribution` | Back-trajectory pollutant attribution |
+| `GET` | `/api/weather/forecast` | FourCastNet AI weather grid |
+| `GET` | `/api/insights/` | AI-generated environmental alerts |
+| `POST` | `/api/insights/generate` | Trigger new Gemini AI insight generation |
+| `POST` | `/api/reports/generate` | Generate & download a scientific PDF report |
+| `GET` | `/api/health` | Service health check |
 
-### Enforcing "No Mock Data"
-All synthetic mock wind flow generators and placeholder arrays were removed:
-* If ERA5 850 hPa winds are missing, the system utilizes 10m surface winds.
-* If all meteorological fields are missing, the trajectory terminates naturally rather than injecting synthetic waves, ensuring the analytics represent real science.
-* Hardcoded frontend visual placeholders were updated to render empty charts with proper error panels in the absence of telemetry.
+---
+
+## 🗄️ Database Schema (Supabase)
+
+| Table | Description |
+|---|---|
+| `cpcb_stations` | 29 real CPCB monitoring nodes with lat/lon, city, state |
+| `aqi_observations` | Daily/hourly AQI readings per station |
+| `tropomi_products` | 1000 TROPOMI HCHO column measurements |
+| `fire_records` | 45 NASA FIRMS active fire detections (geocoded to Indian states) |
+| `weather_forecasts` | FourCastNet model output grid |
+| `ai_insights` | Gemini-generated alert records |
+| `reports` | Generated report metadata & PDF storage |
+
+---
+
+## 📐 Design System — Atmospheric Intelligence
+
+The UI is built on the **Atmospheric Intelligence** design system generated via Google Stitch:
+
+- **Theme**: Glassmorphic dark (`#0b1326` base, `rgba(15,23,42,0.7)` glass cards)
+- **Primary Color**: Cyan `#4cd7f6` (safe air quality signal)
+- **Warning Color**: Amber `#ffb95f` (moderate risk)
+- **Critical Color**: Red `#ef4444` (hazardous conditions)
+- **Typography**: Geist (headings/data), Inter (body text)
+- **Glass Effect**: `backdrop-filter: blur(16px)` + `1px solid rgba(255,255,255,0.1)` borders
+- **Hover Lift**: Cards animate `translateY(-2px)` with intensified blur and border opacity
+
+---
+
+## 🔒 Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Description |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Supabase anonymous/service role key |
+| `GEMINI_API_KEY` | Google Gemini API key for AI insights |
+| `GEE_SERVICE_ACCOUNT` | Google Earth Engine service account email |
+| `GEE_KEY_PATH` | Path to GEE credentials JSON |
+| `NASA_FIRMS_API_KEY` | NASA FIRMS active fire API key |
+| `APP_ENV` | `development` or `production` |
+| `CORS_ORIGINS` | Comma-separated list of allowed frontend origins |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Description |
+|---|---|
+| `VITE_API_BASE_URL` | Backend API base URL (e.g. `http://localhost:8000/api`) |
+
+---
+
+## 📊 Data Sources
+
+| Source | Dataset | Update Frequency |
+|---|---|---|
+| CPCB India | Ground AQI observations (PM2.5, PM10, NO2, SO2, CO, O3) | Hourly |
+| NASA FIRMS | Active fire radiative power (MODIS/VIIRS) | Near real-time |
+| ESA Sentinel-5P / TROPOMI | HCHO column density (L2 product) | Daily |
+| ECMWF ERA5 | Wind fields, boundary layer height | 6-hourly |
+| NVIDIA FourCastNet | 7-day AI weather forecast grids | On-demand |
+
+---
+
+## 📄 License
+
+This project is developed for the **Indian Space Research Organisation (ISRO SAC)** atmospheric science research program. All rights reserved. Refer to project documentation for data usage and redistribution policies.
+
+---
+
+<p align="center">
+  Built with ❤️ for India's atmospheric intelligence mission · AeroVision V1.2.0-Production
+</p>
