@@ -124,7 +124,7 @@ export const insightsApi = {
 
 // ── Reports API ──
 export const reportsApi = {
-  list: (params?: { report_type?: string; limit?: number }) =>
+  list: (params?: { report_type?: string; search?: string; start_date?: string; end_date?: string; limit?: number }) =>
     apiClient.get('/reports/', { params }),
   generate: (data: { report_type: string; title: string; include_sections?: string[] }) =>
     apiClient.post('/reports/generate', data),
@@ -132,6 +132,8 @@ export const reportsApi = {
     apiClient.get(`/reports/${id}`),
   download: (id: number) =>
     apiClient.get(`/reports/${id}/download`),
+  getDownloadUrl: (id: number) =>
+    `${API_BASE_URL}/reports/${id}/download`,
 };
 
 // ── Weather API ──
