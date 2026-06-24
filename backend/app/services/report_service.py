@@ -38,6 +38,16 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
+        
+        # Draw diagonal watermark on all pages behind the text
+        self.saveState()
+        self.setFont("Helvetica-Bold", 55)
+        self.setFillColor(colors.HexColor("#F1F5F9"))  # Slate 100 (subtle background color)
+        self.translate(306, 396)
+        self.rotate(45)
+        self.drawCentredString(0, 0, "AERO VISION")
+        self.restoreState()
+        
         # Draw decorations only on pages after page 1 (cover header is fine on page 1)
         if self._pageNumber > 1:
             # Header text

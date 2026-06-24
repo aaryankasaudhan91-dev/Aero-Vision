@@ -112,6 +112,8 @@ export const insightsApi = {
     apiClient.get('/insights/', { params }),
   getExecutiveSummary: () =>
     apiClient.get('/insights/summary'),
+  generate: () =>
+    apiClient.post('/insights/generate'),
   getAQIInsights: () =>
     apiClient.get('/insights/aqi'),
   getHCHOInsights: () =>

@@ -28,6 +28,12 @@ async def get_executive_summary():
     return await insights_service.get_executive_summary()
 
 
+@router.post("/generate")
+async def generate_insights():
+    """Trigger real-time regeneration of scientific insights."""
+    return await insights_service.generate_live_insights()
+
+
 @router.get("/aqi")
 async def get_aqi_insights():
     """Get AQI-specific trend analysis insights."""
@@ -50,3 +56,4 @@ async def get_fire_insights():
 async def get_transport_insights():
     """Get pollutant transport findings."""
     return await insights_service.get_transport_insights()
+
