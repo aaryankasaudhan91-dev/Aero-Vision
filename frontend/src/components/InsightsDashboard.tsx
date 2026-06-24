@@ -67,6 +67,16 @@ export const InsightsDashboard: React.FC = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    };
+  }, []);
+
   return (
     <div className="flex-1 p-6 space-y-6">
       <div className="flex justify-between items-start">
