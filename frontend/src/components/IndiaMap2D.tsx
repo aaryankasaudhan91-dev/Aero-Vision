@@ -299,6 +299,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       <MapContainer
         center={defaultCenter}
         zoom={defaultZoom}
+        minZoom={4.5}
+        maxBounds={[[5.0, 65.0], [38.5, 99.0]]}
+        maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="w-full h-full"
         style={{ height: '100%', width: '100%', background: '#f8fafc' }}

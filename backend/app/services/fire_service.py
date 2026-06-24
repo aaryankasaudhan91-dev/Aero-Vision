@@ -24,7 +24,7 @@ class FireService:
                 query = query.eq("state", state)
             if source:
                 query = query.eq("source", source)
-            result = query.limit(500).execute()
+            result = query.limit(2000).execute()
 
             if result.data:
                 fires = result.data
@@ -47,7 +47,7 @@ class FireService:
             "avg_frp": round(sum(frp_values) / len(frp_values), 2) if frp_values else None,
             "max_frp": round(max(frp_values), 2) if frp_values else None,
             "state_distribution": state_counts,
-            "fires": fires[:200],
+            "fires": fires[:1500],
         }
 
     async def get_records(

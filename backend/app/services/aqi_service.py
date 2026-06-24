@@ -28,7 +28,7 @@ class AQIService:
             if city:
                 query = query.eq("cpcb_stations.city", city)
 
-            result = query.order("observed_at", desc=True).limit(500).execute()
+            result = query.order("observed_at", desc=True).limit(2000).execute()
             if result.data:
                 observations = result.data
                 break
@@ -64,7 +64,7 @@ class AQIService:
             "min_aqi": min(aqi_values) if aqi_values else None,
             "aqi_category": avg_category,
             "category_distribution": category_counts,
-            "observations": observations[:100],
+            "observations": observations[:1500],
         }
 
     async def get_stations(

@@ -83,7 +83,7 @@ class HCHOService:
             "date": str(current_query_date),
             "total_hotspots": total_hotspots,
             "region_summary": region_summary,
-            "hotspots": hotspots_data[:50],
+            "hotspots": hotspots_data[:500],
             "avg_hcho": avg_hcho,
             "hotspot_count": total_hotspots,
             "highest_region": highest_region,
@@ -113,7 +113,7 @@ class HCHOService:
         self, start_date: Optional[date] = None, end_date: Optional[date] = None,
         method: Optional[str] = None, season: Optional[str] = None,
         state: Optional[str] = None, period_type: Optional[str] = None,
-        min_hcho: Optional[float] = None, limit: int = 200
+        min_hcho: Optional[float] = None, limit: int = 1000
     ) -> List[Dict]:
         """Get detected HCHO hotspots with filtering."""
         target_date = start_date or datetime.utcnow().date()

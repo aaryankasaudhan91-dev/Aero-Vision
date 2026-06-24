@@ -198,9 +198,12 @@ class FIRMSIngestion:
     BASE_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
 
     async def fetch_fires(self, source: str = "MODIS_NRT", days: int = 1,
-                          area: str = "world") -> List[Dict]:
+                          area: str = "68,6,98,38") -> List[Dict]:
         """Fetch active fire data from NASA FIRMS API."""
-        url = f"{self.BASE_URL}/{settings.FIRMS_MAP_KEY}/{source}/{area}/{days}"
+        query_days = min(5, max(1, days))
+        if area == "world":
+            area = "68,6,98,38"
+        url = f"{self.BASE_URL}/{settings.FIRMS_MAP_KEY}/{source}/{area}/{query_days}"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 if resp.status == 200:
