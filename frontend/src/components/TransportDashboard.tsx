@@ -178,6 +178,16 @@ export const TransportDashboard: React.FC = () => {
     fetchData();
   }, [selectedState, selectedDate]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    };
+  }, [selectedState, selectedDate]);
+
   return (
     <div className="flex-1 p-6 space-y-6">
       <div>

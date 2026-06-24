@@ -10,6 +10,7 @@ interface SidebarProps {
 const tabs = [
   { id: 'aqi', name: 'AQI Overview', icon: '🌍' },
   { id: 'pollutants', name: 'Pollutant Maps', icon: '📊' },
+  { id: 'health', name: 'Health Impact', icon: '🏥' },
   { id: 'hcho', name: 'HCHO Hotspots', icon: '🔥' },
   { id: 'fire', name: 'Fire Correlation', icon: '🛰️' },
   { id: 'transport', name: 'Transport Analysis', icon: '💨' },

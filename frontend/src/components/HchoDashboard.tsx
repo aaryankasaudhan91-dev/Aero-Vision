@@ -92,6 +92,16 @@ export const HchoDashboard: React.FC = () => {
     fetchData();
   }, [selectedState, selectedDate, selectedMethod]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    };
+  }, [selectedState, selectedDate, selectedMethod]);
+
   return (
     <div className="flex-1 p-6 space-y-6">
       <div>

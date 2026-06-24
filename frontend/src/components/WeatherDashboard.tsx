@@ -138,6 +138,18 @@ export const WeatherDashboard: React.FC = () => {
     }
   }, [selectedVariable, selectedDateIdx, forecastDays]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      if (forecastDays.length > 0) {
+        loadDashboardData();
+      }
+    };
+    window.addEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    };
+  }, [selectedVariable, selectedDateIdx, forecastDays]);
+
   const activeVar = variables.find(v => v.id === selectedVariable) || variables[0];
 
   return (

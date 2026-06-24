@@ -96,6 +96,16 @@ export const PollutantDashboard: React.FC = () => {
     fetchData();
   }, [selectedState, selectedCity, selectedDate, selectedPollutant]);
 
+  useEffect(() => {
+    const handleGlobalRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    return () => {
+      window.removeEventListener('refresh-active-dashboard', handleGlobalRefresh);
+    };
+  }, [selectedState, selectedCity, selectedDate, selectedPollutant]);
+
   return (
     <div className="flex-1 p-6 space-y-6">
       <div>

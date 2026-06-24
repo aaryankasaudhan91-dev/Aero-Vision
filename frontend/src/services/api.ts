@@ -18,15 +18,31 @@ const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor
 apiClient.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    (config as any).metadata = { startTime: Date.now() };
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 
 // Response interceptor with retry logic
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const startTime = (response.config as any).metadata?.startTime;
+    if (startTime) {
+      const duration = Date.now() - startTime;
+      window.dispatchEvent(new CustomEvent('api-latency', { detail: { duration } }));
+    }
+    return response;
+  },
   async (error: AxiosError) => {
-    const config = error.config as AxiosRequestConfig & { _retryCount?: number };
+    const config = error.config as AxiosRequestConfig & { _retryCount?: number; metadata?: { startTime: number } };
+    const startTime = config?.metadata?.startTime;
+    if (startTime) {
+      const duration = Date.now() - startTime;
+      window.dispatchEvent(new CustomEvent('api-latency', { detail: { duration } }));
+    }
+
     if (!config) return Promise.reject(error);
 
     config._retryCount = config._retryCount || 0;
@@ -34,6 +50,8 @@ apiClient.interceptors.response.use(
 
     config._retryCount += 1;
     await new Promise((r) => setTimeout(r, 1000 * config._retryCount!));
+    // Reset start time for retry
+    config.metadata = { startTime: Date.now() };
     return apiClient(config);
   }
 );
