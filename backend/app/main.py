@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.config import get_settings
-from app.routers import aqi, hcho, fire, transport, insights, reports
+from app.routers import aqi, hcho, fire, transport, insights, reports, weather
 
 settings = get_settings()
 
@@ -53,6 +53,7 @@ app.include_router(fire.router, prefix="/api/fire", tags=["Fire"])
 app.include_router(transport.router, prefix="/api/transport", tags=["Transport"])
 app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+app.include_router(weather.router, prefix="/api/weather", tags=["Weather"])
 
 
 @app.get("/api/health")

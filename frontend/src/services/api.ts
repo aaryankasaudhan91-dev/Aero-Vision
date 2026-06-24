@@ -134,6 +134,14 @@ export const reportsApi = {
     apiClient.get(`/reports/${id}/download`),
 };
 
+// ── Weather API ──
+export const weatherApi = {
+  getForecast: (params: { start_date: string; variable?: string }) =>
+    apiClient.get('/weather/forecast', { params }),
+  triggerForecast: (start_date: string) =>
+    apiClient.post('/weather/forecast/trigger', { start_date }),
+};
+
 // ── Health Check ──
 export const healthApi = {
   check: () => apiClient.get('/health'),

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import IndiaMap3D from './IndiaMap3D';
+import IndiaMap from './IndiaMap';
 import {
   AreaChart,
   Area,
@@ -189,7 +189,7 @@ export const AqiDashboard: React.FC = () => {
             <span className="text-xs text-slate-500">Ground Sensors</span>
           </div>
           <div className="flex-1 rounded-xl overflow-hidden relative">
-            <IndiaMap3D
+            <IndiaMap
               points={stations.map((stn) => ({
                 latitude: stn.latitude,
                 longitude: stn.longitude,

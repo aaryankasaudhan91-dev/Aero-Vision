@@ -392,47 +392,136 @@ class ERA5Ingestion:
 
 
 class MOSDACIngestion:
-    """Download INSAT-3D AOD data from MOSDAC."""
+    """Download INSAT-3D AOD data from MOSDAC and ingest it."""
 
     BASE_URL = "https://mosdac.gov.in"
+    DATASET_ID = "3DIMG_L2G_AOD"
 
-    async def fetch_aod(self, target_date: str) -> Optional[str]:
-        """Download INSAT-3D Level-2 AOD product."""
-        async with aiohttp.ClientSession() as session:
-            url = f"{self.BASE_URL}/data/insat3d/aod/{target_date}"
-            auth = aiohttp.BasicAuth(settings.MOSDAC_USERNAME, settings.MOSDAC_PASSWORD)
-            async with session.get(url, auth=auth) as resp:
-                if resp.status == 200:
-                    filepath = f"insat3d_aod_{target_date}.hdf"
-                    with open(filepath, "wb") as f:
-                        f.write(await resp.read())
-                    return filepath
-                logger.warning(f"MOSDAC download failed: {resp.status}")
-                return None
+    async def fetch_aod(self, target_date: str) -> int:
+        """Fetch INSAT-3D Level-2 AOD product from MOSDAC, aggregate to daily mean, and store in DB."""
+        import os
+        import tempfile
+        import shutil
+        import xarray as xr
 
-    async def ingest_aod(self, filepath: str, observed_date: str) -> int:
-        """Parse INSAT-3D AOD HDF file and store in Supabase."""
+        # 1. Obtain Access Token
+        token_url = f"{self.BASE_URL}/download_api/gettoken"
         try:
-            import xarray as xr
-            ds = xr.open_dataset(filepath, engine="netcdf4")
-            aod_var = None
-            for var in ["AOD_550", "aod_550", "AOD", "aod"]:
-                if var in ds:
-                    aod_var = var
-                    break
-            if not aod_var:
-                logger.error(f"AOD variable not found in {filepath}")
+            async with aiohttp.ClientSession() as session:
+                async with session.post(token_url, json={
+                    "username": settings.MOSDAC_USERNAME,
+                    "password": settings.MOSDAC_PASSWORD
+                }) as resp:
+                    if resp.status != 200:
+                        logger.error(f"MOSDAC authentication failed: {resp.status} - {await resp.text()}")
+                        return 0
+                    tokens = await resp.json()
+                    access_token = tokens.get("access_token")
+        except Exception as e:
+            logger.error(f"Error getting MOSDAC token: {e}")
+            return 0
+
+        # 2. Search for entries
+        search_url = f"{self.BASE_URL}/apios/datasets.json"
+        search_params = {
+            "datasetId": self.DATASET_ID,
+            "startTime": target_date,
+            "endTime": target_date
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(search_url, params=search_params) as resp:
+                    if resp.status != 200:
+                        logger.error(f"MOSDAC search failed: {resp.status} - {await resp.text()}")
+                        return 0
+                    search_data = await resp.json()
+                    entries = search_data.get("entries", [])
+        except Exception as e:
+            logger.error(f"Error searching MOSDAC dataset: {e}")
+            return 0
+
+        if not entries:
+            logger.warning(f"No MOSDAC AOD entries found for {target_date}")
+            return 0
+
+        logger.info(f"Found {len(entries)} MOSDAC AOD files for {target_date}. Starting download...")
+
+        # 3. Download files to safe temp directory
+        temp_dir = tempfile.mkdtemp()
+        download_url = f"{self.BASE_URL}/download_api/download"
+        downloaded_paths = []
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                for entry in entries:
+                    record_id = entry.get("id")
+                    identifier = entry.get("identifier")
+                    headers = {"Authorization": f"Bearer {access_token}"}
+                    
+                    try:
+                        async with session.get(download_url, headers=headers, params={"id": record_id}) as resp:
+                            if resp.status == 200:
+                                filepath = os.path.join(temp_dir, identifier)
+                                with open(filepath, "wb") as f:
+                                    f.write(await resp.read())
+                                downloaded_paths.append(filepath)
+                                logger.info(f"Downloaded {identifier}")
+                            else:
+                                logger.warning(f"Failed to download {identifier}: {resp.status}")
+                    except Exception as e:
+                        logger.error(f"Error downloading {identifier}: {e}")
+
+            if not downloaded_paths:
+                logger.error("No AOD files were successfully downloaded.")
                 return 0
 
-            batch = []
-            lats = ds.latitude.values if "latitude" in ds else ds.lat.values
-            lons = ds.longitude.values if "longitude" in ds else ds.lon.values
-            aod_data = ds[aod_var].values
+            # 4. Load and aggregate files using xarray
+            logger.info("Aggregating AOD frames to daily mean...")
+            aod_arrays = []
+            for filepath in downloaded_paths:
+                try:
+                    ds = xr.open_dataset(filepath, engine="netcdf4")
+                    # Slice to India bounds: Latitude descending (38 to 6), Longitude ascending (68 to 98)
+                    ds_india = ds.sel(latitude=slice(38.0, 6.0), longitude=slice(68.0, 98.0))
+                    # Squeeze the time dimension if it exists to make it a 2D array
+                    aod_2d = ds_india['AOD'].squeeze('time', drop=True)
+                    aod_arrays.append(aod_2d.load())
+                    ds.close()
+                except Exception as e:
+                    logger.error(f"Error loading/processing AOD file {filepath}: {e}")
 
+            if not aod_arrays:
+                logger.error("No AOD data was successfully loaded.")
+                return 0
+
+            # Concatenate along time_of_day and average
+            aod_concat = xr.concat(aod_arrays, dim='time_of_day')
+            aod_daily_mean = aod_concat.mean(dim='time_of_day', skipna=True)
+
+            # 5. Ingest daily mean to Supabase
+            return await self.ingest_daily_mean(aod_daily_mean, target_date)
+
+        finally:
+            # Clean up temp folder
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.warning(f"Error cleaning up temporary directory: {e}")
+
+    async def ingest_daily_mean(self, aod_mean, observed_date: str) -> int:
+        """Ingest the aggregated daily mean AOD array into Supabase."""
+        try:
+            batch = []
+            lats = aod_mean.latitude.values
+            lons = aod_mean.longitude.values
+            aod_data = aod_mean.values
+
+            inserted = 0
             for i, lat in enumerate(lats):
                 for j, lon in enumerate(lons):
-                    val = float(aod_data[i, j]) if len(aod_data.shape) == 2 else float(aod_data[0, i, j])
-                    if val == val and 0 <= val <= 5:  # Valid range check
+                    val = float(aod_data[i, j])
+                    # Valid range checks (val == val checks for NaN)
+                    if val == val and 0 <= val <= 5:
                         batch.append({
                             "source": "INSAT-3D",
                             "observed_date": observed_date,
@@ -442,14 +531,17 @@ class MOSDACIngestion:
                         })
                         if len(batch) >= 500:
                             supabase.table("satellite_aod").insert(batch).execute()
+                            inserted += len(batch)
                             batch = []
 
             if batch:
                 supabase.table("satellite_aod").insert(batch).execute()
-            ds.close()
-            return len(batch)
+                inserted += len(batch)
+
+            logger.info(f"Ingested {inserted} daily mean AOD records into satellite_aod")
+            return inserted
         except Exception as e:
-            logger.error(f"Error ingesting AOD: {e}")
+            logger.error(f"Error ingesting daily mean AOD: {e}")
             return 0
 
 
@@ -467,6 +559,7 @@ async def run_full_ingestion(target_date: str):
     tasks = [
         firms.ingest_modis(days=1),
         firms.ingest_viirs(days=1),
+        mosdac.fetch_aod(target_date),
     ]
 
     # TROPOMI products

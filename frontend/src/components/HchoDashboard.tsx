@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import IndiaMap3D from './IndiaMap3D';
+import IndiaMap from './IndiaMap';
 import {
   LineChart,
   Line,
@@ -165,7 +165,7 @@ export const HchoDashboard: React.FC = () => {
           </div>
 
           <div className="flex-1 rounded-xl overflow-hidden relative">
-            <IndiaMap3D
+            <IndiaMap
               points={hotspots
                 .map((hot: any) => {
                   const lat = hot.centroid_lat;

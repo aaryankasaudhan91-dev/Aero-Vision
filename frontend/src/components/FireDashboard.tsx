@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import IndiaMap3D from './IndiaMap3D';
+import IndiaMap from './IndiaMap';
 import {
   XAxis,
   YAxis,
@@ -166,7 +166,7 @@ export const FireDashboard: React.FC = () => {
           </div>
 
           <div className="flex-1 rounded-xl overflow-hidden relative">
-            <IndiaMap3D
+            <IndiaMap
               points={fires
                 .map((fire: any) => {
                   const lat = fire.latitude;

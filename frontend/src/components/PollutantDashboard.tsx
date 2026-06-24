@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import IndiaMap3D from './IndiaMap3D';
+import IndiaMap from './IndiaMap';
 import {
   BarChart,
   Bar,
@@ -135,7 +135,7 @@ export const PollutantDashboard: React.FC = () => {
           </div>
 
           <div className="flex-1 rounded-xl overflow-hidden relative">
-            <IndiaMap3D
+            <IndiaMap
               points={dataList
                 .map((item: any) => {
                   const lat = item.cpcb_stations?.latitude;

@@ -4,6 +4,7 @@ import appLogo from '../assets/app-logo.svg';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  isOpen: boolean;
 }
 
 const tabs = [
@@ -12,13 +13,16 @@ const tabs = [
   { id: 'hcho', name: 'HCHO Hotspots', icon: '🔥' },
   { id: 'fire', name: 'Fire Correlation', icon: '🛰️' },
   { id: 'transport', name: 'Transport Analysis', icon: '💨' },
+  { id: 'weather', name: 'Weather Dynamics', icon: '🌦️' },
   { id: 'insights', name: 'AI Insights', icon: '🧠' },
   { id: 'reports', name: 'Research Reports', icon: '📝' },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen }) => {
   return (
-    <aside className="w-64 glass-panel border-r border-slate-800 flex flex-col h-screen fixed left-0 top-0 z-30">
+    <aside className={`w-64 glass-panel border-r border-slate-800 flex flex-col h-screen fixed left-0 top-0 z-30 transition-transform duration-300 transform ${
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}>
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
         <img src={appLogo} alt="AeroVision Logo" className="w-10 h-10 object-contain animate-pulse-subtle" />
         <div>

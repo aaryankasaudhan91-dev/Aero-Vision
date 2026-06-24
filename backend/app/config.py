@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     MOSDAC_PASSWORD: str = ""
     DATA_GOV_IN_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+    NVIDIA_API_KEY: str = ""
 
     @property
     def cors_origins_list(self) -> List[str]:

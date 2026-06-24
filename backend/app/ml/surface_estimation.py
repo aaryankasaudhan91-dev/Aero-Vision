@@ -16,7 +16,7 @@ from app.database import supabase
 
 
 FEATURE_COLS = [
-    "sat_no2", "sat_so2", "sat_co", "sat_o3", "sat_hcho",
+    "sat_no2", "sat_so2", "sat_co", "sat_o3", "sat_hcho", "aod_550nm",
     "temperature_2m", "relative_humidity", "wind_speed_10m",
     "wind_direction", "pbl_height", "month_sin", "month_cos",
     "doy_sin", "doy_cos",

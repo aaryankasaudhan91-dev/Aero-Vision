@@ -57,25 +57,61 @@ class DataPreprocessor:
         return integrated
 
     async def _fetch_observations(self, start_date: str, end_date: str) -> List[Dict]:
-        result = supabase.table("cpcb_observations").select(
-            "*, cpcb_stations!inner(latitude, longitude, state, city)"
-        ).gte("observed_at", f"{start_date}T00:00:00").lte("observed_at", f"{end_date}T23:59:59").limit(10000).execute()
-        return result.data or []
+        all_data = []
+        chunk_size = 1000
+        start = 0
+        while True:
+            result = supabase.table("cpcb_observations").select(
+                "*, cpcb_stations!inner(latitude, longitude, state, city)"
+            ).gte("observed_at", f"{start_date}T00:00:00").lte("observed_at", f"{end_date}T23:59:59").range(start, start + chunk_size - 1).execute()
+            data = result.data or []
+            all_data.extend(data)
+            if len(data) < chunk_size:
+                break
+            start += chunk_size
+        return all_data
 
     async def _fetch_aod(self, start_date: str, end_date: str) -> List[Dict]:
-        result = supabase.table("satellite_aod").select("*").gte(
-            "observed_date", start_date).lte("observed_date", end_date).limit(10000).execute()
-        return result.data or []
+        all_data = []
+        chunk_size = 1000
+        start = 0
+        while True:
+            result = supabase.table("satellite_aod").select("*").gte(
+                "observed_date", start_date).lte("observed_date", end_date).range(start, start + chunk_size - 1).execute()
+            data = result.data or []
+            all_data.extend(data)
+            if len(data) < chunk_size:
+                break
+            start += chunk_size
+        return all_data
 
     async def _fetch_tropomi(self, start_date: str, end_date: str) -> List[Dict]:
-        result = supabase.table("tropomi_products").select("*").gte(
-            "observed_date", start_date).lte("observed_date", end_date).limit(20000).execute()
-        return result.data or []
+        all_data = []
+        chunk_size = 1000
+        start = 0
+        while True:
+            result = supabase.table("tropomi_products").select("*").gte(
+                "observed_date", start_date).lte("observed_date", end_date).range(start, start + chunk_size - 1).execute()
+            data = result.data or []
+            all_data.extend(data)
+            if len(data) < chunk_size:
+                break
+            start += chunk_size
+        return all_data
 
     async def _fetch_meteorological(self, start_date: str, end_date: str) -> List[Dict]:
-        result = supabase.table("meteorological_data").select("*").gte(
-            "observed_date", start_date).lte("observed_date", end_date).limit(10000).execute()
-        return result.data or []
+        all_data = []
+        chunk_size = 1000
+        start = 0
+        while True:
+            result = supabase.table("meteorological_data").select("*").gte(
+                "observed_date", start_date).lte("observed_date", end_date).range(start, start + chunk_size - 1).execute()
+            data = result.data or []
+            all_data.extend(data)
+            if len(data) < chunk_size:
+                break
+            start += chunk_size
+        return all_data
 
     def _clean_observations(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean CPCB observations: handle missing values and outliers."""
@@ -154,6 +190,7 @@ class DataPreprocessor:
 
         # Match satellite data to stations (nearest grid point)
         if not df_tropomi.empty and "date" in df_daily.columns:
+            df_tropomi["date"] = pd.to_datetime(df_tropomi["observed_date"]).dt.date
             for product_type in ["NO2", "SO2", "CO", "O3", "HCHO"]:
                 product_df = df_tropomi[df_tropomi["product_type"] == product_type].copy()
                 if not product_df.empty:
@@ -168,18 +205,53 @@ class DataPreprocessor:
                             if slat and slon:
                                 mask = (
                                     (abs(product_df["latitude"] - slat) < 0.15) &
-                                    (abs(product_df["longitude"] - slon) < 0.15)
+                                    (abs(product_df["longitude"] - slon) < 0.15) &
+                                    (product_df["date"] == row["date"])
                                 )
                                 matched = product_df[mask]
                                 if not matched.empty:
                                     df_daily.at[idx, col_name] = matched["column_value"].mean()
 
+        # Match AOD data to stations (nearest grid point)
+        if not df_aod.empty and "date" in df_daily.columns:
+            df_daily["aod_550nm"] = np.nan
+            df_aod["date"] = pd.to_datetime(df_aod["observed_date"]).dt.date
+            for idx, row in df_daily.iterrows():
+                if "station_lat" in df_obs.columns:
+                    station_info = df_obs[df_obs["station_id"] == row["station_id"]].iloc[0]
+                    slat = station_info.get("station_lat")
+                    slon = station_info.get("station_lon")
+                    if slat and slon:
+                        mask = (
+                            (abs(df_aod["latitude"] - slat) < 0.15) &
+                            (abs(df_aod["longitude"] - slon) < 0.15) &
+                            (df_aod["date"] == row["date"])
+                        )
+                        matched = df_aod[mask]
+                        if not matched.empty:
+                            df_daily.at[idx, "aod_550nm"] = matched["aod_550nm"].mean()
+
         # Match meteorological data
         if not df_meteo.empty and "temperature_2m" in df_meteo.columns:
+            df_meteo["date"] = pd.to_datetime(df_meteo["observed_date"]).dt.date
             for met_col in ["temperature_2m", "relative_humidity", "wind_speed_10m",
                            "wind_direction", "pbl_height"]:
                 if met_col in df_meteo.columns:
                     df_daily[met_col] = np.nan
+                    for idx, row in df_daily.iterrows():
+                        if "station_lat" in df_obs.columns:
+                            station_info = df_obs[df_obs["station_id"] == row["station_id"]].iloc[0]
+                            slat = station_info.get("station_lat")
+                            slon = station_info.get("station_lon")
+                            if slat and slon:
+                                mask = (
+                                    (abs(df_meteo["latitude"] - slat) < 0.15) &
+                                    (abs(df_meteo["longitude"] - slon) < 0.15) &
+                                    (df_meteo["date"] == row["date"])
+                                )
+                                matched = df_meteo[mask]
+                                if not matched.empty:
+                                    df_daily.at[idx, met_col] = matched[met_col].mean()
 
         return df_daily
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import IndiaMap3D from './IndiaMap3D';
+import IndiaMap from './IndiaMap';
 import {
   BarChart,
   Bar,
@@ -249,7 +249,7 @@ export const TransportDashboard: React.FC = () => {
           </div>
 
           <div className="flex-1 rounded-xl overflow-hidden relative">
-            <IndiaMap3D
+            <IndiaMap
               points={[
                 { latitude: 28.6139, longitude: 77.2090, value: 35, label: 'Receptor: Delhi NCR', state: 'Delhi', color: '#a855f7' },
                 ...trajectory.map((pt: any) => ({
