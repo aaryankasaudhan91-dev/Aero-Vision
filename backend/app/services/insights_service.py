@@ -72,19 +72,31 @@ class InsightsService:
             f"FourCastNet Winds: average wind speed={weather_stats['avg_wind']:.1f} m/s.\n"
         )
 
+        api_key = settings.NVIDIA_API_KEY
+        is_nvidia_active = api_key and "placeholder" not in api_key.lower()
+        is_gemini_active = settings.GEMINI_API_KEY and "placeholder" not in settings.GEMINI_API_KEY.lower()
         insights_list = []
 
-        if settings.GEMINI_API_KEY:
+        # 1. Dual-AI Generation: If both APIs are active, orchestrate them to write different sections
+        if is_nvidia_active and is_gemini_active:
             try:
+                import httpx
                 from google import genai
-                client = genai.Client(api_key=settings.GEMINI_API_KEY)
-                prompt = (
-                    f"Based on the environmental data below, write exactly 4 distinct scientific environmental insights "
-                    f"(one for each type: 'aqi_trend', 'hotspot', 'fire_impact', 'transport').\n\n"
+                from loguru import logger
+                
+                # Part A: NVIDIA LLaMA 3.1 NIM (aqi_trend, hotspot)
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+                nvidia_prompt = (
+                    f"Based on the environmental data below, write exactly 2 distinct scientific environmental insights "
+                    f"(one for 'aqi_trend' and one for 'hotspot').\n\n"
                     f"Environmental Data:\n{data_block}\n\n"
                     f"You must return the result as a raw JSON list with no markdown formatting tags (no ```json code blocks). "
                     f"The JSON schema must be a list of objects, each containing these exact keys:\n"
-                    f"- 'insight_type': one of ['aqi_trend', 'hotspot', 'fire_impact', 'transport']\n"
+                    f"- 'insight_type': one of ['aqi_trend', 'hotspot']\n"
                     f"- 'title': A short title (4-6 words)\n"
                     f"- 'summary': A 1-2 sentence highly technical scientific explanation referencing numbers from the data.\n"
                     f"- 'detailed_text': A 1-2 sentence mitigation or policy action recommendation.\n"
@@ -92,21 +104,158 @@ class InsightsService:
                     f"- 'region': The affected region (e.g., 'Indo-Gangetic Plain', 'Central India', 'North India')\n"
                 )
                 
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
+                nvidia_insights = []
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "meta/llama-3.1-70b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "You are a professional environmental data analyst. Return ONLY raw JSON, without backticks or markdown code block formatting."},
+                                {"role": "user", "content": nvidia_prompt}
+                            ],
+                            "temperature": 0.1,
+                            "max_tokens": 600
+                        },
+                        timeout=12.0
+                    )
+                    if resp.status_code == 200:
+                        text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                        if text.startswith("```"):
+                            text = re.sub(r"^```(?:json)?\n", "", text)
+                            text = re.sub(r"\n```$", "", text)
+                        nvidia_insights = json.loads(text.strip())
+                        logger.info("Successfully generated dual insights (Part 1/2: aqi_trend, hotspot) using NVIDIA LLaMA 3.1 NIM.")
+                    else:
+                        raise RuntimeError("NVIDIA NIM call failed in dual mode")
+
+                # Part B: Google Gemini AI (fire_impact, transport)
+                gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                gemini_prompt = (
+                    f"Based on the environmental data below, write exactly 2 distinct scientific environmental insights "
+                    f"(one for 'fire_impact' and one for 'transport').\n\n"
+                    f"Environmental Data:\n{data_block}\n\n"
+                    f"You must return the result as a raw JSON list with no markdown formatting tags (no ```json code blocks). "
+                    f"The JSON schema must be a list of objects, each containing these exact keys:\n"
+                    f"- 'insight_type': one of ['fire_impact', 'transport']\n"
+                    f"- 'title': A short title (4-6 words)\n"
+                    f"- 'summary': A 1-2 sentence highly technical scientific explanation referencing numbers from the data.\n"
+                    f"- 'detailed_text': A 1-2 sentence mitigation or policy action recommendation.\n"
+                    f"- 'severity': one of ['info', 'warning', 'critical']\n"
+                    f"- 'region': The affected region (e.g., 'Indo-Gangetic Plain', 'Central India', 'North India')\n"
                 )
                 
+                gemini_insights = []
+                response = gemini_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=gemini_prompt,
+                )
                 text = response.text.strip()
                 if text.startswith("```"):
                     text = re.sub(r"^```(?:json)?\n", "", text)
                     text = re.sub(r"\n```$", "", text)
-                insights_list = json.loads(text.strip())
+                gemini_insights = json.loads(text.strip())
+                logger.info("Successfully generated dual insights (Part 2/2: fire_impact, transport) using Google Gemini AI.")
+                
+                insights_list = nvidia_insights + gemini_insights
             except Exception as e:
-                print(f"Gemini insights generation error: {e}. Falling back to local templates.")
-                insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
-        else:
-            insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
+                from loguru import logger
+                logger.error(f"Dual AI insights generation failed: {e}. Falling back to single-provider workflow.")
+                insights_list = []
+
+        # 2. Single-provider workflow (Fallback or when only one key is configured)
+        if not insights_list:
+            if is_nvidia_active:
+                try:
+                    import httpx
+                    from loguru import logger
+                    headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    }
+                    prompt = (
+                        f"Based on the environmental data below, write exactly 4 distinct scientific environmental insights "
+                        f"(one for each type: 'aqi_trend', 'hotspot', 'fire_impact', 'transport').\n\n"
+                        f"Environmental Data:\n{data_block}\n\n"
+                        f"You must return the result as a raw JSON list with no markdown formatting tags (no ```json code blocks). "
+                        f"The JSON schema must be a list of objects, each containing these exact keys:\n"
+                        f"- 'insight_type': one of ['aqi_trend', 'hotspot', 'fire_impact', 'transport']\n"
+                        f"- 'title': A short title (4-6 words)\n"
+                        f"- 'summary': A 1-2 sentence highly technical scientific explanation referencing numbers from the data.\n"
+                        f"- 'detailed_text': A 1-2 sentence mitigation or policy action recommendation.\n"
+                        f"- 'severity': one of ['info', 'warning', 'critical']\n"
+                        f"- 'region': The affected region (e.g., 'Indo-Gangetic Plain', 'Central India', 'North India')\n"
+                    )
+                    async with httpx.AsyncClient() as client:
+                        resp = await client.post(
+                            "https://integrate.api.nvidia.com/v1/chat/completions",
+                            headers=headers,
+                            json={
+                                "model": "meta/llama-3.1-70b-instruct",
+                                "messages": [
+                                    {"role": "system", "content": "You are a professional environmental data analyst. Return ONLY raw JSON, without backticks or markdown code block formatting."},
+                                    {"role": "user", "content": prompt}
+                                ],
+                                "temperature": 0.1,
+                                "max_tokens": 1000
+                            },
+                            timeout=12.0
+                        )
+                        if resp.status_code == 200:
+                            text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                            if text.startswith("```"):
+                                text = re.sub(r"^```(?:json)?\n", "", text)
+                                text = re.sub(r"\n```$", "", text)
+                            insights_list = json.loads(text.strip())
+                            logger.info("Successfully generated all insights using NVIDIA LLaMA 3.1 NIM.")
+                        else:
+                            raise RuntimeError("NVIDIA NIM call failed in single-provider mode")
+                except Exception as e:
+                    from loguru import logger
+                    logger.error(f"NVIDIA NIM single-provider insights failed: {e}. Trying Gemini...")
+                    is_nvidia_active = False
+
+            if not is_nvidia_active:
+                if is_gemini_active:
+                    try:
+                        from google import genai
+                        from loguru import logger
+                        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                        prompt = (
+                            f"Based on the environmental data below, write exactly 4 distinct scientific environmental insights "
+                            f"(one for each type: 'aqi_trend', 'hotspot', 'fire_impact', 'transport').\n\n"
+                            f"Environmental Data:\n{data_block}\n\n"
+                            f"You must return the result as a raw JSON list with no markdown formatting tags (no ```json code blocks). "
+                            f"The JSON schema must be a list of objects, each containing these exact keys:\n"
+                            f"- 'insight_type': one of ['aqi_trend', 'hotspot', 'fire_impact', 'transport']\n"
+                            f"- 'title': A short title (4-6 words)\n"
+                            f"- 'summary': A 1-2 sentence highly technical scientific explanation referencing numbers from the data.\n"
+                            f"- 'detailed_text': A 1-2 sentence mitigation or policy action recommendation.\n"
+                            f"- 'severity': one of ['info', 'warning', 'critical']\n"
+                            f"- 'region': The affected region (e.g., 'Indo-Gangetic Plain', 'Central India', 'North India')\n"
+                        )
+                        
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt,
+                        )
+                        
+                        text = response.text.strip()
+                        if text.startswith("```"):
+                            text = re.sub(r"^```(?:json)?\n", "", text)
+                            text = re.sub(r"\n```$", "", text)
+                        insights_list = json.loads(text.strip())
+                        logger.info("Successfully generated all insights using Google Gemini AI.")
+                    except Exception as e:
+                        from loguru import logger
+                        logger.error(f"Gemini insights generation error: {e}. Falling back to local templates.")
+                        insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
+                else:
+                    insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
+
+
 
         # Clear old database insights and insert fresh ones
         try:

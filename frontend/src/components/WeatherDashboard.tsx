@@ -31,6 +31,10 @@ export const WeatherDashboard: React.FC = () => {
   const [triggering, setTriggering] = useState(false);
   const [stats, setStats] = useState({ avg: 0, min: 0, max: 0 });
   const [trendData, setTrendData] = useState<any[]>([]);
+  
+  const [commentary, setCommentary] = useState<string>('');
+  const [commentarySource, setCommentarySource] = useState<string>('');
+  const [loadingCommentary, setLoadingCommentary] = useState(false);
 
   // Generate 7 forecast days starting from today
   useEffect(() => {
@@ -57,12 +61,26 @@ export const WeatherDashboard: React.FC = () => {
   const loadDashboardData = async () => {
     if (forecastDays.length === 0) return;
     setLoading(true);
+    setLoadingCommentary(true);
     const targetDate = forecastDays[selectedDateIdx];
 
     try {
       // 1. Fetch map points for currently selected date index
       const points = await fetchForecastForDate(targetDate, selectedVariable);
       setMapPoints(points);
+
+      // Fetch commentary
+      try {
+        const commRes = await weatherApi.getForecastCommentary({ start_date: targetDate, variable: selectedVariable });
+        setCommentary(commRes.data?.commentary || '');
+        setCommentarySource(commRes.data?.source || '');
+      } catch (err) {
+        console.error("Error fetching commentary:", err);
+        setCommentary('');
+        setCommentarySource('');
+      } finally {
+        setLoadingCommentary(false);
+      }
 
       // Compute statistics
       if (points.length > 0) {
@@ -200,12 +218,41 @@ export const WeatherDashboard: React.FC = () => {
         })}
       </div>
 
-      {/* Description Panel */}
-      <div className="glass-card p-5 rounded-2xl border border-slate-800/80 bg-slate-900/20">
-        <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-1.5">
-          <span>ℹ️</span> Description & Dispersion Impact
-        </h3>
-        <p className="text-slate-300 text-xs mt-2 leading-relaxed">{activeVar.desc}</p>
+      {/* Description and AI Commentary Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 bg-slate-900/20 flex flex-col justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-purple-400 flex items-center gap-1.5">
+              <span>ℹ️</span> Description & Dispersion Impact
+            </h3>
+            <p className="text-slate-300 text-xs mt-2 leading-relaxed">{activeVar.desc}</p>
+          </div>
+        </div>
+
+        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 bg-slate-900/20 flex flex-col justify-between min-h-[100px]">
+          <div>
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
+                <span>🤖</span> NVIDIA AI Forecast Analysis
+              </h3>
+              {commentarySource && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-950/50 text-emerald-400 border border-emerald-500/25">
+                  {commentarySource}
+                </span>
+              )}
+            </div>
+            {loadingCommentary ? (
+              <div className="flex items-center gap-2 mt-3 text-slate-400 text-xs">
+                <span className="inline-block animate-spin rounded-full h-3.5 w-3.5 border-2 border-emerald-500 border-t-transparent"></span>
+                Generating meteorological insights...
+              </div>
+            ) : (
+              <p className="text-slate-200 text-xs mt-2 leading-relaxed italic">
+                "{commentary || 'No AI commentary generated for this variable.'}"
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Date Slider & Controls */}

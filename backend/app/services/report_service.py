@@ -474,40 +474,75 @@ class ReportService:
         return buffer
 
     async def _generate_real_ai_section(self, section: str, db_context: str, title: str, report_type: str) -> str:
-        """Attempts Gemini-based scientific text generation, falling back to database-driven templates on error."""
+        """Attempts NVIDIA NIM or Gemini-based scientific text generation, falling back to database-driven templates on error."""
         from app.config import get_settings
         settings = get_settings()
         
-        if not settings.GEMINI_API_KEY:
+        api_key = settings.NVIDIA_API_KEY
+        is_nvidia_active = api_key and "placeholder" not in api_key.lower()
+        
+        full_prompt = (
+            f"You are a Senior Atmospheric Research Scientist at ISRO and CPCB.\n"
+            f"You are co-authoring a formal scientific paper/report titled: '{title}'.\n"
+            f"Document Type: {report_type.replace('_', ' ').upper()}.\n\n"
+            f"Here is the real environmental geospatial data and observations from our AeroVision database:\n"
+            f"{db_context}\n\n"
+            f"Please write a comprehensive, highly rigorous, and peer-reviewed style content for the section: {section.upper()}.\n"
+            f"Guidelines:\n"
+            f"- Use precise scientific terminology (e.g., column density, tropospheric boundary layer, advection-diffusion, radiative forcing, Pearson correlation).\n"
+            f"- Refer to the provided database statistics (like average AQI, peak values, fire detections, and model performance scores) to make the text realistic and grounded in observations.\n"
+            f"- Do not use generic placeholders. Write real sentences and insert LaTeX-style math symbols if relevant (e.g. \\sigma, R^2, \\mu g/m^3).\n"
+            f"- Format in clean Markdown. Avoid outputting the section title (we will insert it ourselves).\n"
+            f"- Write only the body of this section. Be detailed, authoritative, and scientific."
+        )
+
+        if is_nvidia_active:
+            try:
+                import httpx
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "meta/llama-3.1-70b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "You are a professional atmospheric scientist and co-author."},
+                                {"role": "user", "content": full_prompt}
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 1200
+                        },
+                        timeout=15.0
+                    )
+                    if resp.status_code == 200:
+                        text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                        print(f"Successfully generated section '{section}' using NVIDIA LLaMA 3.1 NIM.")
+                        return text
+                    else:
+                        print(f"NVIDIA NIM section generation status {resp.status_code}. Trying Gemini...")
+            except Exception as e:
+                print(f"NVIDIA NIM section generation error: {e}. Trying Gemini...")
+
+        if settings.GEMINI_API_KEY:
+            try:
+                from google import genai
+                client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=full_prompt,
+                )
+                return response.text
+            except Exception as e:
+                print(f"Gemini generation error for {section}: {str(e)}. Using database fallback.")
+                return self._generate_scientific_fallback(section, db_context, title, report_type)
+        else:
             return self._generate_scientific_fallback(section, db_context, title, report_type)
-            
-        try:
-            from google import genai
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            
-            full_prompt = (
-                f"You are a Senior Atmospheric Research Scientist at ISRO and CPCB.\n"
-                f"You are co-authoring a formal scientific paper/report titled: '{title}'.\n"
-                f"Document Type: {report_type.replace('_', ' ').upper()}.\n\n"
-                f"Here is the real environmental geospatial data and observations from our AeroVision database:\n"
-                f"{db_context}\n\n"
-                f"Please write a comprehensive, highly rigorous, and peer-reviewed style content for the section: {section.upper()}.\n"
-                f"Guidelines:\n"
-                f"- Use precise scientific terminology (e.g., column density, tropospheric boundary layer, advection-diffusion, radiative forcing, Pearson correlation).\n"
-                f"- Refer to the provided database statistics (like average AQI, peak values, fire detections, and model performance scores) to make the text realistic and grounded in observations.\n"
-                f"- Do not use generic placeholders. Write real sentences and insert LaTeX-style math symbols if relevant (e.g. \\sigma, R^2, \\mu g/m^3).\n"
-                f"- Format in clean Markdown. Avoid outputting the section title (we will insert it ourselves).\n"
-                f"- Write only the body of this section. Be detailed, authoritative, and scientific."
-            )
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=full_prompt,
-            )
-            return response.text
-        except Exception as e:
-            # Fallback gracefully
-            print(f"Gemini generation error for {section}: {str(e)}. Using database fallback.")
-            return self._generate_scientific_fallback(section, db_context, title, report_type)
+
 
     def _generate_scientific_fallback(self, section: str, db_context: str, title: str, report_type: str) -> str:
         """Database-context aware local fallback content builder."""

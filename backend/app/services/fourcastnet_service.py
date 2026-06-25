@@ -330,3 +330,98 @@ class FourCastNetService:
             })
             
         return formatted_points
+
+    async def get_forecast_commentary(self, target_date_str: str, variable: str = "temperature_2m") -> Dict[str, Any]:
+        """Generate a scientific meteorological commentary using NVIDIA NIM LLM."""
+        logger.info(f"Generating meteorological commentary for {target_date_str}, variable: {variable}")
+        
+        # 1. Fetch statistics
+        res = supabase.table("meteorological_data").select(variable).eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1000).execute()
+        data = res.data or []
+        
+        vals = [r[variable] for r in data if r.get(variable) is not None]
+        if variable == "temperature_2m":
+            vals = [v - 273.15 if v > 150 else v for v in vals]
+            
+        if not vals:
+            return {"commentary": f"No meteorological data available for {target_date_str} to perform AI analysis."}
+            
+        mean_val = sum(vals) / len(vals)
+        min_val = min(vals)
+        max_val = max(vals)
+        
+        var_name = variable.replace("_", " ").title()
+        
+        # 2. Call NVIDIA NIM
+        api_key = settings.NVIDIA_API_KEY
+        is_nvidia_active = api_key and "placeholder" not in api_key.lower()
+        
+        if is_nvidia_active:
+            try:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+                prompt = (
+                    f"Write a concise, highly technical 2-sentence meteorological analysis of {var_name} over India "
+                    f"for {target_date_str} based on the following simulated statistics: "
+                    f"Mean: {mean_val:.2f}, Min: {min_val:.2f}, Max: {max_val:.2f}. "
+                    f"Discuss atmospheric dispersion, convective mixing, or transport impacts based on these values."
+                )
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "meta/llama-3.1-70b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "You are a Senior Meteorological AI Assistant. Keep response strictly under 60 words and do not output introductory text."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 120
+                        },
+                        timeout=8
+                    ) as resp:
+                        if resp.status == 200:
+                            res_json = await resp.json()
+                            commentary = res_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                            return {"commentary": commentary, "source": "NVIDIA LLaMA 3.1 NIM"}
+            except Exception as e:
+                logger.warning(f"Failed to generate NVIDIA NIM commentary: {e}")
+                is_nvidia_active = False
+
+        # 3. Call Gemini AI
+        is_gemini_active = settings.GEMINI_API_KEY and "placeholder" not in settings.GEMINI_API_KEY.lower()
+        if not is_nvidia_active and is_gemini_active:
+            try:
+                from google import genai
+                client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                prompt = (
+                    f"Write a concise, highly technical 2-sentence meteorological analysis of {var_name} over India "
+                    f"for {target_date_str} based on the following simulated statistics: "
+                    f"Mean: {mean_val:.2f}, Min: {min_val:.2f}, Max: {max_val:.2f}. "
+                    f"Discuss atmospheric dispersion, convective mixing, or transport impacts based on these values."
+                )
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                commentary = response.text.strip()
+                return {"commentary": commentary, "source": "Google Gemini AI"}
+            except Exception as e:
+                logger.warning(f"Failed to generate Gemini commentary: {e}")
+
+        # Local Fallback
+        if variable == "temperature_2m":
+            commentary = f"Simulated surface temperature averages {mean_val:.1f}°C across the subcontinental grid, ranging from a minimum of {min_val:.1f}°C in northern mountain altitudes to {max_val:.1f}°C in the western dry regions. This spatial thermal gradient induces localized pressure differences, influencing local wind vectors."
+        elif variable == "wind_speed_10m":
+            commentary = f"Average wind velocity is simulated at {mean_val:.1f} m/s, supporting moderate horizontal advection. Peak gusts reaching {max_val:.1f} m/s in coastal corridors will enhance shear dispersion, while low-velocity zones (min {min_val:.1f} m/s) risk localized pollutant pooling."
+        elif variable == "pbl_height":
+            commentary = f"The planetary boundary layer (PBL) height shows a mean depth of {mean_val:.1f} meters, establishing a moderate vertical mixing volume. Shallow boundary layers under {min_val:.1f} meters in the valleys will compress criteria pollutants near the surface, while deep convective layers (max {max_val:.1f} meters) promote vertical venting."
+        else:
+            commentary = f"Simulated {var_name} values show a mean of {mean_val:.1f} across India, with regional variations between {min_val:.1f} and {max_val:.1f}. These meteorological indicators suggest standard convective dynamics and aerosol processing rates."
+            
+        return {"commentary": commentary, "source": "Local Physics Simulator"}
+

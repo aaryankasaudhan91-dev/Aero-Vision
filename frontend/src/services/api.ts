@@ -160,6 +160,8 @@ export const reportsApi = {
 export const weatherApi = {
   getForecast: (params: { start_date: string; variable?: string }) =>
     apiClient.get('/weather/forecast', { params }),
+  getForecastCommentary: (params: { start_date: string; variable?: string }) =>
+    apiClient.get('/weather/forecast/commentary', { params }),
   triggerForecast: (start_date: string) =>
     apiClient.post('/weather/forecast/trigger', { start_date }),
 };

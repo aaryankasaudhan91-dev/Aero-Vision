@@ -32,9 +32,26 @@ async def get_weather_forecast(
 async def trigger_weather_forecast(payload: TriggerForecastRequest):
     """Trigger a new 7-day FourCastNet forecasting run from a given starting date."""
     try:
-        res = await fourcastnet_service.trigger_forecast(payload.start_date)
-        if res.get("status") == "success":
-            return res
-        raise HTTPException(status_code=500, detail=res.get("message", "Forecasting trigger failed"))
+         res = await fourcastnet_service.trigger_forecast(payload.start_date)
+         if res.get("status") == "success":
+             return res
+         raise HTTPException(status_code=500, detail=res.get("message", "Forecasting trigger failed"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to trigger forecast: {e}")
+         raise HTTPException(status_code=500, detail=f"Failed to trigger forecast: {e}")
+
+@router.get("/forecast/commentary")
+async def get_weather_forecast_commentary(
+    start_date: date = Query(..., description="Target date for the forecast (YYYY-MM-DD)"),
+    variable: str = Query(
+        "temperature_2m", 
+        enum=["temperature_2m", "relative_humidity", "wind_speed_10m", "pbl_height", "surface_pressure"],
+        description="The weather/climate variable to analyze"
+    ),
+):
+    """Retrieve an AI-generated meteorological commentary for a specific date and variable."""
+    try:
+        commentary = await fourcastnet_service.get_forecast_commentary(str(start_date), variable)
+        return commentary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate commentary: {e}")
+
