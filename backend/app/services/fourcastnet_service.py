@@ -415,7 +415,7 @@ class FourCastNetService:
                     combined_commentary = f"{nvidia_commentary} {gemini_commentary}"
                     return {"commentary": combined_commentary, "source": "NVIDIA & Gemini Dual-AI"}
             except Exception as e:
-                logger.error(f"Dual-AI weather commentary generation failed: {e}. Falling back to single-provider workflows.")
+                logger.error(f"Dual-AI weather commentary generation failed: {repr(e)}. Falling back to single-provider workflows.")
 
         # Scenario B: Single-Provider NVIDIA LLaMA NIM
         if is_nvidia_active:
@@ -451,7 +451,7 @@ class FourCastNetService:
                             commentary = res_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
                             return {"commentary": commentary, "source": "NVIDIA LLaMA 3.1 NIM"}
             except Exception as e:
-                logger.warning(f"Failed to generate NVIDIA NIM commentary: {e}")
+                logger.warning(f"Failed to generate NVIDIA NIM commentary: {repr(e)}")
                 is_nvidia_active = False
 
         # Scenario C: Single-Provider Google Gemini AI
@@ -472,7 +472,7 @@ class FourCastNetService:
                 commentary = response.text.strip()
                 return {"commentary": commentary, "source": "Google Gemini AI"}
             except Exception as e:
-                logger.warning(f"Failed to generate Gemini commentary: {e}")
+                logger.warning(f"Failed to generate Gemini commentary: {repr(e)}")
 
         # Scenario D: Local Physics Simulator Fallback
         if variable == "temperature_2m":
