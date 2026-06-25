@@ -1,5 +1,6 @@
 """Report Service — Research paper and report generation."""
 
+import asyncio
 import io
 import re
 import html
@@ -184,7 +185,7 @@ class ReportService:
         if end_date:
             query = query.lte("generated_at", end_date)
             
-        result = query.order("generated_at", desc=True).limit(limit).execute()
+        result = await asyncio.to_thread(query.order("generated_at", desc=True).limit(limit).execute)
         return result.data or []
 
     async def _gather_db_context(self) -> str:
@@ -193,7 +194,8 @@ class ReportService:
         
         # 1. AQI Observations
         try:
-            aqi_data = supabase.table("cpcb_observations").select("aqi, city, state").order("observed_at", desc=True).limit(100).execute().data or []
+            query = supabase.table("cpcb_observations").select("aqi, city, state").order("observed_at", desc=True).limit(100)
+            aqi_data = (await asyncio.to_thread(query.execute)).data or []
             if aqi_data:
                 aqis = [r["aqi"] for r in aqi_data if r.get("aqi") is not None]
                 if aqis:
@@ -212,7 +214,8 @@ class ReportService:
             
         # 2. Fire Records
         try:
-            fire_data = supabase.table("fire_records").select("frp, state").order("detected_at", desc=True).limit(100).execute().data or []
+            query = supabase.table("fire_records").select("frp, state").order("detected_at", desc=True).limit(100)
+            fire_data = (await asyncio.to_thread(query.execute)).data or []
             if fire_data:
                 frps = [r["frp"] for r in fire_data if r.get("frp") is not None]
                 states = [r["state"] for r in fire_data if r.get("state")]
@@ -229,7 +232,8 @@ class ReportService:
 
         # 3. TROPOMI HCHO Products
         try:
-            hcho_data = supabase.table("tropomi_products").select("column_value").eq("product_type", "HCHO").order("observed_date", desc=True).limit(100).execute().data or []
+            query = supabase.table("tropomi_products").select("column_value").eq("product_type", "HCHO").order("observed_date", desc=True).limit(100)
+            hcho_data = (await asyncio.to_thread(query.execute)).data or []
             if hcho_data:
                 hcho_vals = [r["column_value"] for r in hcho_data if r.get("column_value") is not None]
                 if hcho_vals:
@@ -245,7 +249,8 @@ class ReportService:
 
         # 4. Model Metadata & Evaluator
         try:
-            models_data = supabase.table("model_metadata").select("model_name, target_variable, rmse, r_squared").eq("is_active", True).execute().data or []
+            query = supabase.table("model_metadata").select("model_name, target_variable, rmse, r_squared").eq("is_active", True)
+            models_data = (await asyncio.to_thread(query.execute)).data or []
             if models_data:
                 context_parts.append("Active Atmospheric Predictive Models:\n")
                 for m in models_data:
@@ -292,12 +297,12 @@ class ReportService:
             "content": content,
             "status": "generated",
         }
-        result = supabase.table("reports").insert(report_data).execute()
+        result = await asyncio.to_thread(supabase.table("reports").insert(report_data).execute)
         return result.data[0] if result.data else report_data
 
     async def get_report(self, report_id: int) -> Dict:
         """Retrieves a single report from database by ID."""
-        result = supabase.table("reports").select("*").eq("id", report_id).single().execute()
+        result = await asyncio.to_thread(supabase.table("reports").select("*").eq("id", report_id).single().execute)
         return result.data if result.data else {}
 
     async def download_report(self, report_id: int) -> Dict:
@@ -542,7 +547,8 @@ class ReportService:
                         f"Do not write any introductory or conversational text. Output only the refined body of the section."
                     )
                     
-                    response = client.models.generate_content(
+                    response = await asyncio.to_thread(
+                        client.models.generate_content,
                         model='gemini-2.5-flash',
                         contents=refinement_prompt,
                     )
@@ -590,7 +596,8 @@ class ReportService:
             try:
                 from google import genai
                 client = genai.Client(api_key=settings.GEMINI_API_KEY)
-                response = client.models.generate_content(
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
                     model='gemini-2.5-flash',
                     contents=full_prompt,
                 )
