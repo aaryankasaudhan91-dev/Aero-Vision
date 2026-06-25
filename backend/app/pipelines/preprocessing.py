@@ -181,7 +181,7 @@ class DataPreprocessor:
             df_obs["station_lon"] = df_obs["cpcb_stations"].apply(lambda x: x.get("longitude") if isinstance(x, dict) else None)
 
         # Aggregate observations to daily means per station
-        daily_cols = ["station_id", "date", "pm25", "no2", "so2", "co", "o3"]
+        daily_cols = ["station_id", "date", "pm25", "no2", "so2", "co", "o3", "station_lat", "station_lon"]
         existing_cols = [c for c in daily_cols if c in df_obs.columns]
         if "date" in df_obs.columns:
             df_daily = df_obs[existing_cols].groupby(["station_id", "date"]).mean(numeric_only=True).reset_index()

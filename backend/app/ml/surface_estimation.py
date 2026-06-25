@@ -25,8 +25,8 @@ FEATURE_COLS = [
 TARGET_COLS = ["pm25", "no2", "so2", "co", "o3"]
 
 
-def prepare_features(df: pd.DataFrame) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
-    """Extract feature matrix and target arrays."""
+def prepare_features(df: pd.DataFrame) -> Tuple[np.ndarray, Dict[str, np.ndarray], List[str]]:
+    """Extract feature matrix, target arrays, and available feature column names."""
     available_features = [c for c in FEATURE_COLS if c in df.columns]
     X = df[available_features].fillna(0).values
 
@@ -34,7 +34,7 @@ def prepare_features(df: pd.DataFrame) -> Tuple[np.ndarray, Dict[str, np.ndarray
     for col in TARGET_COLS:
         if col in df.columns:
             targets[col] = df[col].values
-    return X, targets
+    return X, targets, available_features
 
 
 def evaluate_model(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
@@ -47,9 +47,13 @@ def evaluate_model(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     rmse = float(np.sqrt(mean_squared_error(yt, yp)))
     mae = float(mean_absolute_error(yt, yp))
     r2 = float(r2_score(yt, yp))
-    pr, _ = pearsonr(yt, yp)
+    try:
+        pr, _ = pearsonr(yt, yp)
+        pr_val = round(float(pr), 4)
+    except Exception:
+        pr_val = None
     return {"rmse": round(rmse, 4), "mae": round(mae, 4),
-            "r_squared": round(r2, 4), "pearson_r": round(float(pr), 4)}
+            "r_squared": round(r2, 4), "pearson_r": pr_val}
 
 
 class RandomForestModel:
@@ -59,7 +63,7 @@ class RandomForestModel:
         self.models = {}
         self.params = {"n_estimators": n_estimators, "max_depth": max_depth}
 
-    def train(self, X_train, y_train_dict, X_val, y_val_dict) -> Dict:
+    def train(self, X_train, y_train_dict, X_val, y_val_dict, feature_cols: List[str]) -> Dict:
         """Train one RF model per target pollutant."""
         results = {}
         for target, y_train in y_train_dict.items():
@@ -82,7 +86,7 @@ class RandomForestModel:
                 y_pred = model.predict(X_val)
                 metrics = evaluate_model(y_val_dict[target], y_pred)
                 metrics["feature_importance"] = dict(zip(
-                    FEATURE_COLS[:X_train.shape[1]],
+                    feature_cols,
                     [round(float(fi), 4) for fi in model.feature_importances_]
                 ))
                 results[target] = metrics
@@ -117,7 +121,7 @@ class XGBoostModel:
         self.models = {}
         self.params = {"n_estimators": n_estimators, "max_depth": max_depth, "learning_rate": learning_rate}
 
-    def train(self, X_train, y_train_dict, X_val, y_val_dict) -> Dict:
+    def train(self, X_train, y_train_dict, X_val, y_val_dict, feature_cols: List[str]) -> Dict:
         import xgboost as xgb
         results = {}
         for target, y_train in y_train_dict.items():
@@ -150,7 +154,7 @@ class XGBoostModel:
                 metrics = evaluate_model(y_val_dict[target], y_pred)
                 importance = model.feature_importances_
                 metrics["feature_importance"] = dict(zip(
-                    FEATURE_COLS[:X_train.shape[1]],
+                    feature_cols,
                     [round(float(fi), 4) for fi in importance]
                 ))
                 results[target] = metrics
@@ -238,42 +242,294 @@ def build_cnn_lstm_model(time_steps: int, height: int, width: int, channels: int
     return model
 
 
+def prepare_lstm_data(df: pd.DataFrame, seq_len: int = 5) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    """Prepare sequential dataset for LSTM grouped by station."""
+    available_features = [c for c in FEATURE_COLS if c in df.columns]
+    X_seqs = []
+    y_seqs_dict = {c: [] for c in TARGET_COLS if c in df.columns}
+    
+    df_sorted = df.sort_values(["station_id", "date"])
+    for _, group in df_sorted.groupby("station_id"):
+        if len(group) < seq_len:
+            continue
+        X_group = group[available_features].fillna(0).values
+        for i in range(len(group) - seq_len + 1):
+            X_seqs.append(X_group[i : i + seq_len])
+            for target in y_seqs_dict.keys():
+                y_val = group.iloc[i + seq_len - 1][target]
+                y_seqs_dict[target].append(y_val)
+                
+    if not X_seqs:
+        return np.empty((0, seq_len, len(available_features))), {k: np.empty(0) for k in y_seqs_dict}
+    return np.array(X_seqs), {k: np.array(v) for k, v in y_seqs_dict.items()}
+
+
+def prepare_cnn_lstm_data(df: pd.DataFrame, seq_len: int = 5, height: int = 5, width: int = 5) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    """Build spatial-temporal patches around station observations for CNN-LSTM hybrid."""
+    available_features = [c for c in FEATURE_COLS if c in df.columns]
+    channels = len(available_features)
+    
+    df_sorted = df.sort_values(["station_id", "date"])
+    X_patches = []
+    y_dict = {c: [] for c in TARGET_COLS if c in df.columns}
+    
+    for _, group in df_sorted.groupby("station_id"):
+        if len(group) < seq_len:
+            continue
+        X_group = group[available_features].fillna(0).values
+        for i in range(len(group) - seq_len + 1):
+            seq_patch = []
+            for t in range(seq_len):
+                val_vector = X_group[i + t]
+                # Repeat values over spatial dims to mimic spatial grid neighborhood
+                patch = np.zeros((height, width, channels))
+                for c in range(channels):
+                    patch[:, :, c] = val_vector[c]
+                seq_patch.append(patch)
+            X_patches.append(seq_patch)
+            for target in y_dict.keys():
+                y_dict[target].append(group.iloc[i + seq_len - 1][target])
+                
+    if not X_patches:
+        return (
+            np.empty((0, seq_len, height, width, channels)),
+            {k: np.empty(0) for k in y_dict}
+        )
+    return np.array(X_patches), {k: np.array(v) for k, v in y_dict.items()}
+
+
+class LSTMModelWrapper:
+    """LSTM wrapper for sequential pollutant estimation."""
+
+    def __init__(self, seq_len: int = 5):
+        self.models = {}
+        self.seq_len = seq_len
+        self.params = {"seq_len": seq_len, "epochs": 5, "batch_size": 32}
+
+    def train(self, df_train, df_val) -> Dict:
+        X_train_seq, y_train_seq_dict = prepare_lstm_data(df_train, self.seq_len)
+        X_val_seq, y_val_seq_dict = prepare_lstm_data(df_val, self.seq_len)
+        
+        results = {}
+        if X_train_seq.shape[0] < 50:
+            logger.warning("LSTM: Insufficient sequential data for training")
+            return results
+
+        input_shape = (X_train_seq.shape[1], X_train_seq.shape[2])
+        
+        for target, y_train in y_train_seq_dict.items():
+            mask = ~np.isnan(y_train)
+            if mask.sum() < 50:
+                continue
+                
+            model = build_lstm_model(input_shape, output_dim=1)
+            y_val_target = y_val_seq_dict.get(target, np.array([]))
+            val_mask = ~np.isnan(y_val_target)
+            
+            if val_mask.sum() > 0:
+                model.fit(
+                    X_train_seq[mask], y_train[mask],
+                    validation_data=(X_val_seq[val_mask], y_val_target[val_mask]),
+                    epochs=self.params["epochs"],
+                    batch_size=self.params["batch_size"],
+                    verbose=0
+                )
+            else:
+                model.fit(
+                    X_train_seq[mask], y_train[mask],
+                    epochs=self.params["epochs"],
+                    batch_size=self.params["batch_size"],
+                    verbose=0
+                )
+                
+            self.models[target] = model
+            
+            # Evaluate on validation
+            if target in y_val_seq_dict and val_mask.sum() > 0:
+                y_pred = model.predict(X_val_seq[val_mask]).flatten()
+                metrics = evaluate_model(y_val_target[val_mask], y_pred)
+                results[target] = metrics
+                logger.info(f"LSTM {target}: R²={metrics['r_squared']}, RMSE={metrics['rmse']}")
+                
+        return results
+
+    def predict(self, df: pd.DataFrame) -> Dict[str, np.ndarray]:
+        X_seq, _ = prepare_lstm_data(df, self.seq_len)
+        predictions = {}
+        if X_seq.shape[0] == 0:
+            return {target: np.array([]) for target in self.models.keys()}
+        for target, model in self.models.items():
+            preds = model.predict(X_seq).flatten()
+            predictions[target] = preds
+        return predictions
+
+    def save(self, path: str = "models/lstm"):
+        import os
+        os.makedirs(path, exist_ok=True)
+        for target, model in self.models.items():
+            model.save(f"{path}/lstm_{target}.keras")
+
+    def load(self, path: str = "models/lstm"):
+        import os
+        import tensorflow as tf
+        for target in TARGET_COLS:
+            fpath = f"{path}/lstm_{target}.keras"
+            if os.path.exists(fpath):
+                self.models[target] = tf.keras.models.load_model(fpath)
+
+
+class CNNLSTMModelWrapper:
+    """CNN-LSTM hybrid wrapper for spatial-temporal pollutant estimation."""
+
+    def __init__(self, seq_len: int = 5, height: int = 5, width: int = 5):
+        self.models = {}
+        self.seq_len = seq_len
+        self.height = height
+        self.width = width
+        self.params = {"seq_len": seq_len, "height": height, "width": width, "epochs": 5, "batch_size": 32}
+
+    def train(self, df_train, df_val) -> Dict:
+        X_train_seq, y_train_seq_dict = prepare_cnn_lstm_data(df_train, self.seq_len, self.height, self.width)
+        X_val_seq, y_val_seq_dict = prepare_cnn_lstm_data(df_val, self.seq_len, self.height, self.width)
+        
+        results = {}
+        if X_train_seq.shape[0] < 50:
+            logger.warning("CNN-LSTM: Insufficient data for training")
+            return results
+
+        channels = X_train_seq.shape[4]
+        
+        for target, y_train in y_train_seq_dict.items():
+            mask = ~np.isnan(y_train)
+            if mask.sum() < 50:
+                continue
+                
+            model = build_cnn_lstm_model(
+                self.seq_len, self.height, self.width, channels, output_dim=1
+            )
+            y_val_target = y_val_seq_dict.get(target, np.array([]))
+            val_mask = ~np.isnan(y_val_target)
+            
+            if val_mask.sum() > 0:
+                model.fit(
+                    X_train_seq[mask], y_train[mask],
+                    validation_data=(X_val_seq[val_mask], y_val_target[val_mask]),
+                    epochs=self.params["epochs"],
+                    batch_size=self.params["batch_size"],
+                    verbose=0
+                )
+            else:
+                model.fit(
+                    X_train_seq[mask], y_train[mask],
+                    epochs=self.params["epochs"],
+                    batch_size=self.params["batch_size"],
+                    verbose=0
+                )
+                
+            self.models[target] = model
+            
+            # Evaluate on validation
+            if target in y_val_seq_dict and val_mask.sum() > 0:
+                y_pred = model.predict(X_val_seq[val_mask]).flatten()
+                metrics = evaluate_model(y_val_target[val_mask], y_pred)
+                results[target] = metrics
+                logger.info(f"CNN-LSTM {target}: R²={metrics['r_squared']}, RMSE={metrics['rmse']}")
+                
+        return results
+
+    def predict(self, df: pd.DataFrame) -> Dict[str, np.ndarray]:
+        X_seq, _ = prepare_cnn_lstm_data(df, self.seq_len, self.height, self.width)
+        predictions = {}
+        if X_seq.shape[0] == 0:
+            return {target: np.array([]) for target in self.models.keys()}
+        for target, model in self.models.items():
+            preds = model.predict(X_seq).flatten()
+            predictions[target] = preds
+        return predictions
+
+    def save(self, path: str = "models/cnn_lstm"):
+        import os
+        os.makedirs(path, exist_ok=True)
+        for target, model in self.models.items():
+            model.save(f"{path}/cnn_lstm_{target}.keras")
+
+    def load(self, path: str = "models/cnn_lstm"):
+        import os
+        import tensorflow as tf
+        for target in TARGET_COLS:
+            fpath = f"{path}/cnn_lstm_{target}.keras"
+            if os.path.exists(fpath):
+                self.models[target] = tf.keras.models.load_model(fpath)
+
+
 class ModelTrainer:
     """Orchestrates training, evaluation, and selection of all models."""
 
     def __init__(self):
         self.rf = RandomForestModel()
         self.xgb = XGBoostModel()
+        self.lstm = LSTMModelWrapper()
+        self.cnn_lstm = CNNLSTMModelWrapper()
 
     async def train_all_models(self, df_train, df_val, df_test) -> Dict:
         """Train all models and compare performance."""
-        X_train, y_train = prepare_features(df_train)
-        X_val, y_val = prepare_features(df_val)
-        X_test, y_test = prepare_features(df_test)
+        X_train, y_train, feature_cols = prepare_features(df_train)
+        X_val, y_val, _ = prepare_features(df_val)
+        X_test, y_test, _ = prepare_features(df_test)
 
         all_results = {}
 
         # Train Random Forest
         logger.info("Training Random Forest...")
-        rf_results = self.rf.train(X_train, y_train, X_val, y_val)
+        rf_results = self.rf.train(X_train, y_train, X_val, y_val, feature_cols)
         all_results["random_forest"] = rf_results
         self.rf.save()
 
         # Train XGBoost
         logger.info("Training XGBoost...")
-        xgb_results = self.xgb.train(X_train, y_train, X_val, y_val)
+        xgb_results = self.xgb.train(X_train, y_train, X_val, y_val, feature_cols)
         all_results["xgboost"] = xgb_results
         self.xgb.save()
+
+        # Train LSTM
+        logger.info("Training LSTM...")
+        lstm_results = self.lstm.train(df_train, df_val)
+        all_results["lstm"] = lstm_results
+        self.lstm.save()
+
+        # Train CNN-LSTM
+        logger.info("Training CNN-LSTM...")
+        cnn_lstm_results = self.cnn_lstm.train(df_train, df_val)
+        all_results["cnn_lstm"] = cnn_lstm_results
+        self.cnn_lstm.save()
 
         # Evaluate on test set
         logger.info("Evaluating on test set...")
         test_results = {}
-        for model_name, model in [("random_forest", self.rf), ("xgboost", self.xgb)]:
-            preds = model.predict(X_test)
-            for target, y_pred in preds.items():
-                if target in y_test:
-                    metrics = evaluate_model(y_test[target], y_pred)
-                    test_results[f"{model_name}_{target}"] = metrics
+        for model_name, model in [
+            ("random_forest", self.rf),
+            ("xgboost", self.xgb),
+            ("lstm", self.lstm),
+            ("cnn_lstm", self.cnn_lstm)
+        ]:
+            if model_name in ["random_forest", "xgboost"]:
+                preds = model.predict(X_test)
+                for target, y_pred in preds.items():
+                    if target in y_test:
+                        metrics = evaluate_model(y_test[target], y_pred)
+                        test_results[f"{model_name}_{target}"] = metrics
+            else:
+                preds = model.predict(df_test)
+                # Reshape labels for sequence targets
+                _, y_test_seq = (
+                    prepare_lstm_data(df_test, model.seq_len)
+                    if model_name == "lstm"
+                    else prepare_cnn_lstm_data(df_test, model.seq_len)
+                )
+                for target, y_pred in preds.items():
+                    if target in y_test_seq and len(y_pred) > 0:
+                        metrics = evaluate_model(y_test_seq[target], y_pred)
+                        test_results[f"{model_name}_{target}"] = metrics
 
         all_results["test_evaluation"] = test_results
 
@@ -288,23 +544,30 @@ class ModelTrainer:
 
     async def _store_metadata(self, results: Dict):
         """Store model training results in Supabase."""
-        from datetime import datetime
-        for model_name in ["random_forest", "xgboost"]:
+        from datetime import datetime, timezone
+        for model_name in ["random_forest", "xgboost", "lstm", "cnn_lstm"]:
             model_results = results.get(model_name, {})
             for target, metrics in model_results.items():
                 if isinstance(metrics, dict) and "rmse" in metrics:
+                    if model_name == "random_forest":
+                        hp = self.rf.params
+                    elif model_name == "xgboost":
+                        hp = self.xgb.params
+                    elif model_name == "lstm":
+                        hp = self.lstm.params
+                    else:
+                        hp = self.cnn_lstm.params
+
                     record = {
                         "model_name": model_name,
                         "model_version": "1.0",
                         "target_variable": target,
-                        "training_date": datetime.utcnow().isoformat(),
+                        "training_date": datetime.now(timezone.utc).isoformat(),
                         "rmse": metrics.get("rmse"),
                         "mae": metrics.get("mae"),
                         "r_squared": metrics.get("r_squared"),
                         "pearson_r": metrics.get("pearson_r"),
-                        "hyperparameters": json.dumps(
-                            self.rf.params if model_name == "random_forest" else self.xgb.params
-                        ),
+                        "hyperparameters": json.dumps(hp),
                         "feature_importance": json.dumps(metrics.get("feature_importance", {})),
                         "model_path": f"models/{model_name}/{model_name}_{target}",
                         "is_active": False,
@@ -319,7 +582,7 @@ class ModelTrainer:
         best_model = None
         best_avg_r2 = -float("inf")
 
-        for model_name in ["random_forest", "xgboost"]:
+        for model_name in ["random_forest", "xgboost", "lstm", "cnn_lstm"]:
             model_results = results.get(model_name, {})
             r2_values = [m["r_squared"] for m in model_results.values()
                         if isinstance(m, dict) and m.get("r_squared") is not None]
@@ -338,4 +601,4 @@ class ModelTrainer:
             except Exception as e:
                 logger.error(f"Error activating best model: {e}")
 
-        return {"model_name": best_model, "avg_r_squared": round(best_avg_r2, 4)}
+        return {"model_name": best_model, "avg_r_squared": round(best_avg_r2, 4) if best_avg_r2 != -float("inf") else 0.0}

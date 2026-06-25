@@ -61,3 +61,4 @@ orjson==3.10.12
 joblib==1.4.2
 tqdm==4.67.1
 loguru==0.7.3
+google-genai==1.75.0
