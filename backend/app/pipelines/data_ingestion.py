@@ -558,8 +558,26 @@ async def run_full_ingestion(target_date: str):
     era5 = ERA5Ingestion()
     mosdac = MOSDACIngestion()
 
+    async def run_cpcb():
+        try:
+            logger.info("Starting CPCB ingestion task...")
+            stations = await cpcb.fetch_station_list()
+            if stations:
+                await cpcb.ingest_stations(stations)
+                # Ingest observations for the first 15 stations to keep it optimized
+                for stn in stations[:15]:
+                    stn_id = stn.get("id", stn.get("station_id"))
+                    if stn_id:
+                        obs = await cpcb.fetch_observations(stn_id, target_date, target_date)
+                        if obs:
+                            await cpcb.ingest_observations(stn_id, obs)
+            logger.info("CPCB Ingestion task completed")
+        except Exception as e:
+            logger.error(f"CPCB Ingestion task failed: {e}")
+
     # Ingest in parallel where possible
     tasks = [
+        run_cpcb(),
         firms.ingest_modis(days=1),
         firms.ingest_viirs(days=1),
         mosdac.fetch_aod(target_date),
@@ -576,5 +594,24 @@ async def run_full_ingestion(target_date: str):
             logger.error(f"Ingestion task {i} failed: {r}")
         else:
             logger.info(f"Ingestion task {i} completed: {r}")
+
+    # Run spatial analytics on the ingested data
+    logger.info("Starting analytical pipelines...")
+    try:
+        from app.ml.hcho_hotspot import HCHOHotspotDetector
+        detector = HCHOHotspotDetector()
+        await detector.detect_hotspots(target_date, target_date, season="monsoon" if "06" <= target_date[5:7] <= "09" else "annual")
+    except Exception as e:
+        logger.error(f"HCHO Hotspot Detection failed: {e}")
+
+    try:
+        from app.ml.correlation_transport import FireHCHOAnalyzer, TransportAnalyzer
+        analyzer = FireHCHOAnalyzer()
+        await analyzer.run_correlation_analysis(target_date, target_date, season="monsoon" if "06" <= target_date[5:7] <= "09" else "annual")
+        
+        transport = TransportAnalyzer()
+        await transport.analyze_transport(target_date)
+    except Exception as e:
+        logger.error(f"Fire-HCHO Correlation or Transport Analysis failed: {e}")
 
     logger.info("Full ingestion pipeline completed")

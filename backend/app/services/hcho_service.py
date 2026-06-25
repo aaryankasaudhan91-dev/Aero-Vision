@@ -1,6 +1,7 @@
 """HCHO Service — Formaldehyde hotspot detection and analysis."""
 
-from datetime import date, datetime, timedelta
+import asyncio
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from app.database import supabase
@@ -14,14 +15,14 @@ class HCHOService:
         season: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get HCHO overview with hotspot summary."""
-        target_date = date or datetime.utcnow().date()
+        target_date = date or datetime.now(timezone.utc).date()
         obs_data = []
         attempts = 0
         current_query_date = target_date
 
         while attempts < 10:
             query = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
-            res = query.limit(2000).execute()
+            res = await asyncio.to_thread(query.limit(2000).execute)
             if res.data:
                 obs_data = res.data
                 break
@@ -41,25 +42,9 @@ class HCHOService:
             hq = hq.eq("state", state)
         if season:
             hq = hq.eq("season", season)
-        h_res = hq.limit(100).execute()
+        h_res = await asyncio.to_thread(hq.limit(100).execute)
         hotspots_data = h_res.data or []
         total_hotspots = h_res.count or len(hotspots_data)
-
-        if not hotspots_data and obs_data:
-            sorted_obs = sorted(obs_data, key=lambda x: x.get("column_value", 0), reverse=True)
-            top_pct = sorted_obs[:max(10, len(sorted_obs) // 20)]
-            for idx, pt in enumerate(top_pct):
-                hotspots_data.append({
-                    "id": idx,
-                    "detection_method": "percentile",
-                    "hotspot_date": str(current_query_date),
-                    "centroid_lat": pt["latitude"],
-                    "centroid_lon": pt["longitude"],
-                    "mean_hcho": pt["column_value"],
-                    "region_name": f"Cluster Zone {idx + 1}",
-                    "state": state or "Regional Zone",
-                })
-            total_hotspots = len(hotspots_data)
 
         regions = {}
         for h in hotspots_data:
@@ -100,7 +85,7 @@ class HCHOService:
             query = query.gte("observed_date", str(start_date))
         if end_date:
             query = query.lte("observed_date", str(end_date))
-        result = query.order("observed_date", desc=True).limit(limit).execute()
+        result = await asyncio.to_thread(query.order("observed_date", desc=True).limit(limit).execute)
         data = result.data or []
 
         if lat is not None and lon is not None:
@@ -116,14 +101,14 @@ class HCHOService:
         min_hcho: Optional[float] = None, limit: int = 1000
     ) -> List[Dict]:
         """Get detected HCHO hotspots with filtering."""
-        target_date = start_date or datetime.utcnow().date()
-        obs_data = []
+        target_date = start_date or datetime.now(timezone.utc).date()
         attempts = 0
         current_query_date = target_date
 
         if start_date == end_date:
             while attempts < 10:
-                res = supabase.table("tropomi_products").select("id").eq("product_type", "HCHO").eq("observed_date", str(current_query_date)).limit(1).execute()
+                res_query = supabase.table("tropomi_products").select("id").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
+                res = await asyncio.to_thread(res_query.limit(1).execute)
                 if res.data:
                     break
                 if isinstance(current_query_date, str):
@@ -150,34 +135,17 @@ class HCHOService:
         if min_hcho:
             query = query.gte("mean_hcho", min_hcho)
 
-        result = query.order("mean_hcho", desc=True).limit(limit).execute()
-        hotspots = result.data or []
-
-        if not hotspots and start_date == end_date:
-            t_res = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date)).limit(2000).execute()
-            obs_data = t_res.data or []
-            if obs_data:
-                sorted_obs = sorted(obs_data, key=lambda x: x.get("column_value", 0), reverse=True)
-                top_pct = sorted_obs[:max(10, len(sorted_obs) // 20)]
-                for idx, pt in enumerate(top_pct):
-                    hotspots.append({
-                        "id": idx,
-                        "detection_method": method or "percentile",
-                        "hotspot_date": str(current_query_date),
-                        "centroid_lat": pt["latitude"],
-                        "centroid_lon": pt["longitude"],
-                        "mean_hcho": pt["column_value"],
-                        "region_name": f"Cluster Zone {idx + 1}",
-                        "state": state or "Regional Zone",
-                    })
-        return hotspots
+        result = await asyncio.to_thread(query.order("mean_hcho", desc=True).limit(limit).execute)
+        return result.data or []
 
     async def get_hotspot_regions(self) -> List[Dict]:
         """Get aggregated hotspot region summary."""
-        result = supabase.table("hcho_hotspots").select(
-            "region_name, state, season, mean_hcho, max_hcho, area_sq_km, "
-            "detection_method, centroid_lat, centroid_lon"
-        ).execute()
+        result = await asyncio.to_thread(
+            supabase.table("hcho_hotspots").select(
+                "region_name, state, season, mean_hcho, max_hcho, area_sq_km, "
+                "detection_method, centroid_lat, centroid_lon"
+            ).execute
+        )
         data = result.data or []
 
         regions = {}
@@ -226,7 +194,7 @@ class HCHOService:
         query = supabase.table("hcho_hotspots").select("*").eq("season", season)
         if year:
             query = query.gte("period_start", f"{year}-01-01").lte("period_end", f"{year}-12-31")
-        result = query.order("mean_hcho", desc=True).limit(200).execute()
+        result = await asyncio.to_thread(query.order("mean_hcho", desc=True).limit(200).execute)
         return result.data or []
 
     async def get_trends(
@@ -240,7 +208,7 @@ class HCHOService:
             "observed_date", str(start_date)
         ).lte("observed_date", str(end_date))
 
-        result = query.order("observed_date").limit(5000).execute()
+        result = await asyncio.to_thread(query.order("observed_date").limit(5000).execute)
         data = result.data or []
 
         # Aggregate to daily means
@@ -268,7 +236,7 @@ class HCHOService:
         query = supabase.table("tropomi_products").select(
             "observed_date, column_value"
         ).eq("product_type", "HCHO")
-        result = query.limit(10000).execute()
+        result = await asyncio.to_thread(query.limit(10000).execute)
         data = result.data or []
 
         # Monthly climatology

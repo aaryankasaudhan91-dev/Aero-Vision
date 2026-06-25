@@ -1,5 +1,6 @@
 """Insights Service — AI-generated scientific summaries."""
 
+import asyncio
 import json
 import re
 from typing import Optional, List, Dict, Any
@@ -17,7 +18,8 @@ class InsightsService:
         # 1. Fetch real-time environmental context
         aqi_stats = {"avg_aqi": 145.0, "max_aqi": 250, "cities": ["Delhi", "Noida", "Gurugram"]}
         try:
-            aqi_res = supabase.table("cpcb_observations").select("aqi, city").order("observed_at", desc=True).limit(50).execute().data or []
+            query = supabase.table("cpcb_observations").select("aqi, city").order("observed_at", desc=True).limit(50)
+            aqi_res = (await asyncio.to_thread(query.execute)).data or []
             if aqi_res:
                 aqis = [r["aqi"] for r in aqi_res if r.get("aqi") is not None]
                 cities = list(set([r["city"] for r in aqi_res if r.get("city")]))
@@ -31,7 +33,8 @@ class InsightsService:
 
         fire_stats = {"fire_count": 12, "avg_frp": 32.5, "states": ["Punjab", "Haryana"]}
         try:
-            fire_res = supabase.table("fire_records").select("frp, state").order("detected_at", desc=True).limit(50).execute().data or []
+            query = supabase.table("fire_records").select("frp, state").order("detected_at", desc=True).limit(50)
+            fire_res = (await asyncio.to_thread(query.execute)).data or []
             if fire_res:
                 frps = [r["frp"] for r in fire_res if r.get("frp") is not None]
                 states = list(set([r["state"] for r in fire_res if r.get("state")]))
@@ -45,7 +48,8 @@ class InsightsService:
 
         hcho_stats = {"avg_hcho": 1.45e-4, "max_hcho": 2.9e-4}
         try:
-            hcho_res = supabase.table("tropomi_products").select("column_value").eq("product_type", "HCHO").order("observed_date", desc=True).limit(50).execute().data or []
+            query = supabase.table("tropomi_products").select("column_value").eq("product_type", "HCHO").order("observed_date", desc=True).limit(50)
+            hcho_res = (await asyncio.to_thread(query.execute)).data or []
             if hcho_res:
                 hcho_vals = [r["column_value"] for r in hcho_res if r.get("column_value") is not None]
                 if hcho_vals:
@@ -56,7 +60,8 @@ class InsightsService:
 
         weather_stats = {"avg_wind": 4.1}
         try:
-            weather_res = supabase.table("meteorological_data").select("wind_speed").eq("source", "FourCastNet").limit(50).execute().data or []
+            query = supabase.table("meteorological_data").select("wind_speed").eq("source", "FourCastNet").limit(50)
+            weather_res = (await asyncio.to_thread(query.execute)).data or []
             if weather_res:
                 winds = [r["wind_speed"] for r in weather_res if r.get("wind_speed") is not None]
                 if winds:
@@ -147,7 +152,8 @@ class InsightsService:
                 )
                 
                 gemini_insights = []
-                response = gemini_client.models.generate_content(
+                response = await asyncio.to_thread(
+                    gemini_client.models.generate_content,
                     model='gemini-2.5-flash',
                     contents=gemini_prompt,
                 )
@@ -237,7 +243,8 @@ class InsightsService:
                             f"- 'region': The affected region (e.g., 'Indo-Gangetic Plain', 'Central India', 'North India')\n"
                         )
                         
-                        response = client.models.generate_content(
+                        response = await asyncio.to_thread(
+                            client.models.generate_content,
                             model='gemini-2.5-flash',
                             contents=prompt,
                         )
@@ -255,17 +262,17 @@ class InsightsService:
                 else:
                     insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
 
-
-
         # Clear old database insights and insert fresh ones
         try:
-            supabase.table("ai_insights").delete().neq("id", 0).execute()
+            delete_query = supabase.table("ai_insights").delete().neq("id", 0)
+            await asyncio.to_thread(delete_query.execute)
             if insights_list:
                 # Remove id field if present to let database autoincrement
                 for item in insights_list:
                     if "id" in item:
                         del item["id"]
-                supabase.table("ai_insights").insert(insights_list).execute()
+                insert_query = supabase.table("ai_insights").insert(insights_list)
+                await asyncio.to_thread(insert_query.execute)
         except Exception as e:
             print(f"Error persisting insights to database: {e}")
 
@@ -343,7 +350,7 @@ class InsightsService:
         if severity:
             query = query.eq("severity", severity)
             
-        result = query.order("created_at", desc=True).limit(limit).execute()
+        result = await asyncio.to_thread(query.order("created_at", desc=True).limit(limit).execute)
         data = result.data or []
         
         # Seeding database if empty
@@ -370,7 +377,8 @@ class InsightsService:
 
     async def get_executive_summary(self) -> Dict[str, Any]:
         """Generate executive summary from all insights."""
-        all_insights = supabase.table("ai_insights").select("*").order("created_at", desc=True).limit(50).execute()
+        query = supabase.table("ai_insights").select("*").order("created_at", desc=True).limit(50)
+        all_insights = await asyncio.to_thread(query.execute)
         insights = all_insights.data or []
         
         if not insights:
@@ -397,7 +405,8 @@ class InsightsService:
                         f"and executive-level summary paragraph (2-3 sentences max) for policy makers:\n\n"
                         f"{context_str}"
                     )
-                    response = client.models.generate_content(
+                    response = await asyncio.to_thread(
+                        client.models.generate_content,
                         model='gemini-2.5-flash',
                         contents=prompt,
                     )
@@ -441,4 +450,3 @@ class InsightsService:
 
     async def get_transport_insights(self) -> List[Dict]:
         return await self.get_insights(insight_type="transport")
-

@@ -1,6 +1,7 @@
 """AQI Service — Business logic for Air Quality Index operations."""
 
-from datetime import date, datetime, timedelta
+import asyncio
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from app.database import supabase
@@ -13,7 +14,7 @@ class AQIService:
         self, date: Optional[date] = None, state: Optional[str] = None, city: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get AQI overview with latest data."""
-        target_date = date or datetime.utcnow().date()
+        target_date = date or datetime.now(timezone.utc).date()
         observations = []
         attempts = 0
         current_query_date = target_date
@@ -28,7 +29,7 @@ class AQIService:
             if city:
                 query = query.eq("cpcb_stations.city", city)
 
-            result = query.order("observed_at", desc=True).limit(2000).execute()
+            result = await asyncio.to_thread(query.order("observed_at", desc=True).limit(2000).execute)
             if result.data:
                 observations = result.data
                 break
@@ -76,7 +77,7 @@ class AQIService:
             query = query.eq("state", state)
         if city:
             query = query.eq("city", city)
-        result = query.order("state").execute()
+        result = await asyncio.to_thread(query.order("state").execute)
         return result.data if result.data else []
 
     async def get_observations(
@@ -99,7 +100,7 @@ class AQIService:
                 if city:
                     query = query.eq("cpcb_stations.city", city)
 
-                result = query.limit(limit).execute()
+                result = await asyncio.to_thread(query.limit(limit).execute)
                 if result.data:
                     return result.data
 
@@ -122,7 +123,7 @@ class AQIService:
         if city:
             query = query.eq("cpcb_stations.city", city)
 
-        result = query.order("observed_at", desc=True).limit(limit).execute()
+        result = await asyncio.to_thread(query.order("observed_at", desc=True).limit(limit).execute)
         return result.data if result.data else []
 
     async def get_predictions(
@@ -144,7 +145,7 @@ class AQIService:
         if model_name:
             query = query.eq("model_name", model_name)
 
-        result = query.order("prediction_date", desc=True).limit(limit).execute()
+        result = await asyncio.to_thread(query.order("prediction_date", desc=True).limit(limit).execute)
         predictions = result.data if result.data else []
 
         # Filter by radius if coordinates provided
@@ -167,7 +168,7 @@ class AQIService:
             query = query.eq("map_date", str(date))
         if region_name:
             query = query.eq("region_name", region_name)
-        result = query.order("map_date", desc=True).limit(50).execute()
+        result = await asyncio.to_thread(query.order("map_date", desc=True).limit(50).execute)
         return result.data if result.data else []
 
     async def get_trends(
@@ -186,7 +187,7 @@ class AQIService:
         if city:
             query = query.eq("cpcb_stations.city", city)
 
-        result = query.order("observed_at").limit(2000).execute()
+        result = await asyncio.to_thread(query.order("observed_at").limit(2000).execute)
         data = result.data if result.data else []
 
         # Aggregate to daily means
@@ -211,13 +212,14 @@ class AQIService:
 
     async def get_pollutant_map(self, pollutant: str, date: Optional[date] = None) -> Dict:
         """Get individual pollutant concentration map data."""
-        target_date = date or datetime.utcnow().date()
+        target_date = date or datetime.now(timezone.utc).date()
 
         # Get from model predictions
-        result = supabase.table("model_predictions").select(
+        query = supabase.table("model_predictions").select(
             "latitude, longitude, pm25_predicted, no2_predicted, "
             "so2_predicted, co_predicted, o3_predicted, prediction_date, model_name"
-        ).eq("prediction_date", str(target_date)).limit(2000).execute()
+        ).eq("prediction_date", str(target_date)).limit(2000)
+        result = await asyncio.to_thread(query.execute)
 
         field_map = {
             "PM2.5": "pm25_predicted", "NO2": "no2_predicted",
@@ -234,32 +236,40 @@ class AQIService:
 
     async def get_model_evaluations(self) -> List[Dict]:
         """Get model performance comparison."""
-        result = supabase.table("model_metadata").select("*").order("r_squared", desc=True).execute()
+        query = supabase.table("model_metadata").select("*").order("r_squared", desc=True)
+        result = await asyncio.to_thread(query.execute)
         return result.data if result.data else []
 
     async def get_dashboard_summary(self) -> Dict[str, Any]:
         """Get aggregated summary for dashboard header."""
-        stations = supabase.table("cpcb_stations").select("id", count="exact").eq("is_active", True).execute()
-        models = supabase.table("model_metadata").select("*").eq("is_active", True).execute()
+        query_stations = supabase.table("cpcb_stations").select("id", count="exact").eq("is_active", True)
+        query_models = supabase.table("model_metadata").select("*").eq("is_active", True)
+
+        stations = await asyncio.to_thread(query_stations.execute)
+        models = await asyncio.to_thread(query_models.execute)
 
         best_model = None
         best_r2 = None
         if models.data:
-            best = max(models.data, key=lambda m: m.get("r_squared", 0))
+            best = max(models.data, key=lambda m: m.get("r_squared", 0) or 0)
             best_model = best.get("model_name")
             best_r2 = best.get("r_squared")
 
-        today = datetime.utcnow().date()
-        obs_today = supabase.table("cpcb_observations").select(
+        today = datetime.now(timezone.utc).date()
+        query_obs = supabase.table("cpcb_observations").select(
             "aqi", count="exact"
-        ).gte("observed_at", f"{today}T00:00:00").execute()
+        ).gte("observed_at", f"{today}T00:00:00")
+        obs_today = await asyncio.to_thread(query_obs.execute)
 
         aqi_values = [o["aqi"] for o in (obs_today.data or []) if o.get("aqi")]
 
-        hotspots = supabase.table("hcho_hotspots").select("id", count="exact").execute()
-        fires = supabase.table("fire_records").select(
+        query_hotspots = supabase.table("hcho_hotspots").select("id", count="exact")
+        hotspots = await asyncio.to_thread(query_hotspots.execute)
+
+        query_fires = supabase.table("fire_records").select(
             "id", count="exact"
-        ).eq("detected_date", str(today)).execute()
+        ).eq("detected_date", str(today))
+        fires = await asyncio.to_thread(query_fires.execute)
 
         return {
             "total_stations": stations.count or 0,

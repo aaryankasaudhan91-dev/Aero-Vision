@@ -1,9 +1,21 @@
 """Transport Service — Wind-based pollutant transport analysis."""
 
-from datetime import date, datetime, timedelta
+import asyncio
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from app.database import supabase
 import math
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Compute great-circle distance between two points in km."""
+    r = 6371.0  # Earth's radius in km
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2)**2
+    return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
 class TransportService:
@@ -16,7 +28,7 @@ class TransportService:
             query = query.eq("analysis_date", str(date))
         if source_region:
             query = query.eq("source_region", source_region)
-        result = query.order("analysis_date", desc=True).limit(100).execute()
+        result = await asyncio.to_thread(query.order("analysis_date", desc=True).limit(100).execute)
         return result.data or []
 
     async def get_wind_vectors(self, date: date, level: str = "850hpa", bounds: Optional[str] = None) -> List[Dict]:
@@ -31,7 +43,7 @@ class TransportService:
                 "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
             ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
 
-            result = query.limit(5000).execute()
+            result = await asyncio.to_thread(query.limit(5000).execute)
             if result.data:
                 data = result.data
                 break
@@ -80,7 +92,7 @@ class TransportService:
         ).lte("analysis_date", str(end_date))
         if source_region:
             query = query.eq("source_region", source_region)
-        result = query.order("analysis_date").limit(500).execute()
+        result = await asyncio.to_thread(query.order("analysis_date").limit(500).execute)
         return result.data or []
 
     async def get_source_attribution(
@@ -92,9 +104,11 @@ class TransportService:
         data = []
 
         while attempts < 10:
-            met_data = supabase.table("meteorological_data").select(
+            query = supabase.table("meteorological_data").select(
                 "latitude, longitude, u_wind_850hpa, v_wind_850hpa, u_wind_10m, v_wind_10m, wind_speed_10m"
-            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null").limit(2000).execute()
+            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
+            
+            met_data = await asyncio.to_thread(query.limit(2000).execute)
 
             if met_data.data:
                 data = met_data.data
@@ -113,13 +127,11 @@ class TransportService:
         current_lat, current_lon = receptor_lat, receptor_lon
 
         for hour in range(1, hours_back + 1):
-            # Find nearest wind observation
+            # Find nearest wind observation using mathematically correct Haversine distance
             best = None
             best_dist = float("inf")
             for obs in data:
-                dlat = obs["latitude"] - current_lat
-                dlon = obs["longitude"] - current_lon
-                dist = dlat ** 2 + dlon ** 2
+                dist = haversine_distance(obs["latitude"], obs["longitude"], current_lat, current_lon)
                 if dist < best_dist:
                     best_dist = dist
                     best = obs
@@ -137,7 +149,14 @@ class TransportService:
                     # Back-track: move opposite to wind direction
                     dt_hours = 1
                     dlat = -v * dt_hours * 3600 / 111000  # m/s to degrees
-                    dlon = -u * dt_hours * 3600 / (111000 * math.cos(math.radians(current_lat)))
+                    
+                    # Prevent division by zero near poles
+                    cos_lat = math.cos(math.radians(current_lat))
+                    if abs(cos_lat) < 0.01:
+                        cos_lat = 0.01 if cos_lat >= 0 else -0.01
+                    
+                    dlon = -u * dt_hours * 3600 / (111000 * cos_lat)
+                    
                     current_lat += dlat
                     current_lon += dlon
                     trajectory.append({"lat": round(current_lat, 4), "lon": round(current_lon, 4), "hour": -hour})

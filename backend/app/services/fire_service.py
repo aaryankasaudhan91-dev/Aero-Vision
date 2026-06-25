@@ -1,6 +1,7 @@
 """Fire Service — Active fire data and fire-HCHO correlation analysis."""
 
-from datetime import date, datetime, timedelta
+import asyncio
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from app.database import supabase
 
@@ -13,7 +14,7 @@ class FireService:
         source: Optional[str] = None
     ) -> Dict[str, Any]:
         """Get fire overview with counts and FRP summary."""
-        target_date = date or datetime.utcnow().date()
+        target_date = date or datetime.now(timezone.utc).date()
         fires = []
         attempts = 0
         current_query_date = target_date
@@ -24,7 +25,8 @@ class FireService:
                 query = query.eq("state", state)
             if source:
                 query = query.eq("source", source)
-            result = query.limit(2000).execute()
+            
+            result = await asyncio.to_thread(query.limit(2000).execute)
 
             if result.data:
                 fires = result.data
@@ -72,7 +74,8 @@ class FireService:
                     query = query.eq("fire_type", fire_type)
                 if min_frp:
                     query = query.gte("frp", min_frp)
-                result = query.limit(limit).execute()
+                
+                result = await asyncio.to_thread(query.limit(limit).execute)
                 if result.data:
                     data = result.data
                     break
@@ -97,7 +100,8 @@ class FireService:
                 query = query.eq("fire_type", fire_type)
             if min_frp:
                 query = query.gte("frp", min_frp)
-            result = query.order("detected_date", desc=True).limit(limit).execute()
+            
+            result = await asyncio.to_thread(query.order("detected_date", desc=True).limit(limit).execute)
             data = result.data or []
 
         if lat is not None and lon is not None:
@@ -117,7 +121,8 @@ class FireService:
             query = query.eq("state", state)
         if season:
             query = query.eq("season", season)
-        result = query.execute()
+        
+        result = await asyncio.to_thread(query.execute)
         return result.data or []
 
     async def get_correlation_timeseries(
@@ -128,15 +133,18 @@ class FireService:
         fire_query = supabase.table("fire_records").select(
             "detected_date, frp"
         ).gte("detected_date", str(start_date)).lte("detected_date", str(end_date))
-        fire_result = fire_query.limit(5000).execute()
-
+        
         # HCHO data aggregated by date
         hcho_query = supabase.table("tropomi_products").select(
             "observed_date, column_value"
         ).eq("product_type", "HCHO").gte(
             "observed_date", str(start_date)
         ).lte("observed_date", str(end_date))
-        hcho_result = hcho_query.limit(5000).execute()
+
+        fire_result, hcho_result = await asyncio.gather(
+            asyncio.to_thread(fire_query.limit(5000).execute),
+            asyncio.to_thread(hcho_query.limit(5000).execute)
+        )
 
         # Aggregate by date
         fire_daily = {}
@@ -180,7 +188,8 @@ class FireService:
         ).gte("detected_date", str(start_date)).lte("detected_date", str(end_date))
         if state:
             query = query.eq("state", state)
-        result = query.order("detected_date").limit(10000).execute()
+        
+        result = await asyncio.to_thread(query.order("detected_date").limit(10000).execute)
         data = result.data or []
 
         daily = {}
@@ -213,7 +222,8 @@ class FireService:
             query = query.gte("detected_date", str(start_date))
         if end_date:
             query = query.lte("detected_date", str(end_date))
-        result = query.limit(10000).execute()
+        
+        result = await asyncio.to_thread(query.limit(10000).execute)
         data = result.data or []
 
         import math
