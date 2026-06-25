@@ -520,7 +520,7 @@ class ReportService:
                             "temperature": 0.2,
                             "max_tokens": 1200
                         },
-                        timeout=15.0
+                        timeout=45.0
                     )
                     if resp.status_code == 200:
                         nvidia_draft = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -550,7 +550,7 @@ class ReportService:
                     print(f"Successfully refined section '{section}' using Google Gemini AI.")
                     return refined_text
             except Exception as e:
-                print(f"Dual-AI report section generation failed: {e}. Falling back to single-provider workflow.")
+                print(f"Dual-AI report section generation failed: {repr(e)}. Falling back to single-provider workflow.")
 
         # Scenario B: Single-Provider NVIDIA LLaMA 3.1 NIM
         if is_nvidia_active:
@@ -574,7 +574,7 @@ class ReportService:
                             "temperature": 0.2,
                             "max_tokens": 1200
                         },
-                        timeout=15.0
+                        timeout=45.0
                     )
                     if resp.status_code == 200:
                         text = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
@@ -583,7 +583,7 @@ class ReportService:
                     else:
                         print(f"NVIDIA NIM section generation status {resp.status_code}. Trying Gemini...")
             except Exception as e:
-                print(f"NVIDIA NIM section generation error: {e}. Trying Gemini...")
+                print(f"NVIDIA NIM section generation error: {repr(e)}. Trying Gemini...")
 
         # Scenario C: Single-Provider Google Gemini AI
         if is_gemini_active:

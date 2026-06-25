@@ -386,7 +386,7 @@ class FourCastNetService:
                             "temperature": 0.2,
                             "max_tokens": 80
                         },
-                        timeout=8
+                        timeout=25.0
                     ) as resp:
                         if resp.status == 200:
                             res_json = await resp.json()
@@ -444,7 +444,7 @@ class FourCastNetService:
                             "temperature": 0.2,
                             "max_tokens": 120
                         },
-                        timeout=8
+                        timeout=25.0
                     ) as resp:
                         if resp.status == 200:
                             res_json = await resp.json()
