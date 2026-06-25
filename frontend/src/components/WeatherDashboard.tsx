@@ -233,7 +233,7 @@ export const WeatherDashboard: React.FC = () => {
           <div>
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-semibold text-emerald-400 flex items-center gap-1.5">
-                <span>🤖</span> NVIDIA AI Forecast Analysis
+                <span>🤖</span> {commentarySource.includes('Dual') ? 'Dual-AI' : commentarySource.includes('Gemini') ? 'Gemini AI' : commentarySource.includes('NVIDIA') ? 'NVIDIA NIM' : 'AI'} Forecast Analysis
               </h3>
               {commentarySource && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-950/50 text-emerald-400 border border-emerald-500/25">

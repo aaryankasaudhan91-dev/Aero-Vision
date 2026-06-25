@@ -474,12 +474,13 @@ class ReportService:
         return buffer
 
     async def _generate_real_ai_section(self, section: str, db_context: str, title: str, report_type: str) -> str:
-        """Attempts NVIDIA NIM or Gemini-based scientific text generation, falling back to database-driven templates on error."""
+        """Attempts NVIDIA NIM + Gemini dual-AI generation, single-provider generation, or falls back to database-driven templates on error."""
         from app.config import get_settings
         settings = get_settings()
         
         api_key = settings.NVIDIA_API_KEY
         is_nvidia_active = api_key and "placeholder" not in api_key.lower()
+        is_gemini_active = settings.GEMINI_API_KEY and "placeholder" not in settings.GEMINI_API_KEY.lower()
         
         full_prompt = (
             f"You are a Senior Atmospheric Research Scientist at ISRO and CPCB.\n"
@@ -496,6 +497,62 @@ class ReportService:
             f"- Write only the body of this section. Be detailed, authoritative, and scientific."
         )
 
+        # Scenario A: Dual-AI Orchestration (NVIDIA LLaMA 3.1 NIM draft + Google Gemini AI editing/peer-review)
+        if is_nvidia_active and is_gemini_active:
+            try:
+                import httpx
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+                nvidia_draft = ""
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "meta/llama-3.1-70b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "You are a professional atmospheric scientist and co-author."},
+                                {"role": "user", "content": full_prompt}
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 1200
+                        },
+                        timeout=15.0
+                    )
+                    if resp.status_code == 200:
+                        nvidia_draft = resp.json().get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                        print(f"Successfully generated section '{section}' draft using NVIDIA LLaMA 3.1 NIM.")
+                
+                if nvidia_draft:
+                    from google import genai
+                    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                    refinement_prompt = (
+                        f"You are a Senior Atmospheric Research Scientist co-authoring the section: {section.upper()} "
+                        f"for the paper/report: '{title}' ({report_type.replace('_', ' ').upper()}).\n\n"
+                        f"Here is a draft written by your co-author (NVIDIA NIM):\n"
+                        f"\"\"\"\n{nvidia_draft}\n\"\"\"\n\n"
+                        f"Here is the database context they referenced:\n"
+                        f"\"\"\"\n{db_context}\n\"\"\"\n\n"
+                        f"Please review, refine, and polish this draft to make it highly academic, professional, and rigorous. "
+                        f"Improve syntax, verify that all scientific terminology is appropriate, ensure LaTeX mathematical symbols "
+                        f"(like \\sigma, R^2, \\mu g/m^3) are used correctly, and format in clean Markdown. "
+                        f"Do not write any introductory or conversational text. Output only the refined body of the section."
+                    )
+                    
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=refinement_prompt,
+                    )
+                    refined_text = response.text.strip()
+                    print(f"Successfully refined section '{section}' using Google Gemini AI.")
+                    return refined_text
+            except Exception as e:
+                print(f"Dual-AI report section generation failed: {e}. Falling back to single-provider workflow.")
+
+        # Scenario B: Single-Provider NVIDIA LLaMA 3.1 NIM
         if is_nvidia_active:
             try:
                 import httpx
@@ -528,7 +585,8 @@ class ReportService:
             except Exception as e:
                 print(f"NVIDIA NIM section generation error: {e}. Trying Gemini...")
 
-        if settings.GEMINI_API_KEY:
+        # Scenario C: Single-Provider Google Gemini AI
+        if is_gemini_active:
             try:
                 from google import genai
                 client = genai.Client(api_key=settings.GEMINI_API_KEY)

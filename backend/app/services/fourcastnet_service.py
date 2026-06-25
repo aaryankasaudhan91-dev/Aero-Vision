@@ -332,7 +332,7 @@ class FourCastNetService:
         return formatted_points
 
     async def get_forecast_commentary(self, target_date_str: str, variable: str = "temperature_2m") -> Dict[str, Any]:
-        """Generate a scientific meteorological commentary using NVIDIA NIM LLM."""
+        """Generate a scientific meteorological commentary using NVIDIA NIM LLM and/or Google Gemini AI."""
         logger.info(f"Generating meteorological commentary for {target_date_str}, variable: {variable}")
         
         # 1. Fetch statistics
@@ -352,10 +352,72 @@ class FourCastNetService:
         
         var_name = variable.replace("_", " ").title()
         
-        # 2. Call NVIDIA NIM
         api_key = settings.NVIDIA_API_KEY
         is_nvidia_active = api_key and "placeholder" not in api_key.lower()
+        is_gemini_active = settings.GEMINI_API_KEY and "placeholder" not in settings.GEMINI_API_KEY.lower()
         
+        # Scenario A: Dual-AI Orchestration (NVIDIA LLaMA NIM + Google Gemini AI)
+        if is_nvidia_active and is_gemini_active:
+            try:
+                # Part 1: NVIDIA NIM generates the physical atmospheric analysis
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+                nvidia_prompt = (
+                    f"Write a concise, highly technical 1-sentence physical/meteorological analysis of {var_name} over India "
+                    f"for {target_date_str} based on the following simulated statistics: "
+                    f"Mean: {mean_val:.2f}, Min: {min_val:.2f}, Max: {max_val:.2f}. "
+                    f"Focus strictly on physical atmospheric dynamics, gradients, and circulation patterns."
+                )
+                
+                nvidia_commentary = ""
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        "https://integrate.api.nvidia.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "meta/llama-3.1-70b-instruct",
+                            "messages": [
+                                {"role": "system", "content": "You are a Senior Meteorological AI Assistant. Keep response strictly under 35 words and do not output introductory text."},
+                                {"role": "user", "content": nvidia_prompt}
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 80
+                        },
+                        timeout=8
+                    ) as resp:
+                        if resp.status == 200:
+                            res_json = await resp.json()
+                            nvidia_commentary = res_json.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                            logger.info(f"NVIDIA part generated: {nvidia_commentary}")
+                
+                # Part 2: Google Gemini AI generates environmental dispersion and health impact commentary
+                if nvidia_commentary:
+                    from google import genai
+                    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+                    gemini_prompt = (
+                        f"NVIDIA's physical meteorological analysis for {var_name} on {target_date_str} is:\n"
+                        f"\"{nvidia_commentary}\"\n\n"
+                        f"Based on this and these statistics (Mean: {mean_val:.2f}, Min: {min_val:.2f}, Max: {max_val:.2f}), "
+                        f"write a concise, 1-sentence scientific commentary explaining the environmental, pollutant dispersion, or public health implications. "
+                        f"Focus on how these conditions affect air quality/transport."
+                    )
+                    
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=gemini_prompt,
+                    )
+                    gemini_commentary = response.text.strip()
+                    logger.info(f"Gemini part generated: {gemini_commentary}")
+                    
+                    combined_commentary = f"{nvidia_commentary} {gemini_commentary}"
+                    return {"commentary": combined_commentary, "source": "NVIDIA & Gemini Dual-AI"}
+            except Exception as e:
+                logger.error(f"Dual-AI weather commentary generation failed: {e}. Falling back to single-provider workflows.")
+
+        # Scenario B: Single-Provider NVIDIA LLaMA NIM
         if is_nvidia_active:
             try:
                 headers = {
@@ -392,9 +454,8 @@ class FourCastNetService:
                 logger.warning(f"Failed to generate NVIDIA NIM commentary: {e}")
                 is_nvidia_active = False
 
-        # 3. Call Gemini AI
-        is_gemini_active = settings.GEMINI_API_KEY and "placeholder" not in settings.GEMINI_API_KEY.lower()
-        if not is_nvidia_active and is_gemini_active:
+        # Scenario C: Single-Provider Google Gemini AI
+        if is_gemini_active:
             try:
                 from google import genai
                 client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -413,7 +474,7 @@ class FourCastNetService:
             except Exception as e:
                 logger.warning(f"Failed to generate Gemini commentary: {e}")
 
-        # Local Fallback
+        # Scenario D: Local Physics Simulator Fallback
         if variable == "temperature_2m":
             commentary = f"Simulated surface temperature averages {mean_val:.1f}°C across the subcontinental grid, ranging from a minimum of {min_val:.1f}°C in northern mountain altitudes to {max_val:.1f}°C in the western dry regions. This spatial thermal gradient induces localized pressure differences, influencing local wind vectors."
         elif variable == "wind_speed_10m":
