@@ -322,40 +322,53 @@ class DataPreprocessor:
         val_ratio: float = 0.15
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """Geographic region-based split to prevent spatial leakage."""
-        if "station_lat" not in df.columns:
-            # Fallback to random split
-            n = len(df)
-            train_end = int(n * train_ratio)
-            val_end = int(n * (train_ratio + val_ratio))
-            shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
-            return shuffled[:train_end], shuffled[train_end:val_end], shuffled[val_end:]
+        if "station_id" not in df.columns or "station_lat" not in df.columns:
+            # Fallback to random split by station if station_id is present, or row-based if not
+            if "station_id" in df.columns:
+                stations = sorted(df["station_id"].unique())
+                np.random.seed(42)
+                np.random.shuffle(stations)
+                n = len(stations)
+                t_end = int(n * train_ratio)
+                v_end = int(n * (train_ratio + val_ratio))
+                train_stns = set(stations[:t_end])
+                val_stns = set(stations[t_end:v_end])
+                test_stns = set(stations[v_end:])
+                return df[df["station_id"].isin(train_stns)].reset_index(drop=True), \
+                       df[df["station_id"].isin(val_stns)].reset_index(drop=True), \
+                       df[df["station_id"].isin(test_stns)].reset_index(drop=True)
+            else:
+                n = len(df)
+                train_end = int(n * train_ratio)
+                val_end = int(n * (train_ratio + val_ratio))
+                shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
+                return shuffled[:train_end], shuffled[train_end:val_end], shuffled[val_end:]
 
-        # Region-based split
-        regions = {
-            "north": lambda row: row.get("station_lat", 0) > 28,
-            "central": lambda row: 20 <= row.get("station_lat", 0) <= 28,
-            "south": lambda row: row.get("station_lat", 0) < 20,
-        }
+        # Region-based split of STATIONS (to prevent spatial leakage)
+        station_coords = df.groupby("station_id")[["station_lat", "station_lon"]].first().reset_index()
+        
+        north_stns = station_coords[station_coords["station_lat"] > 28]["station_id"].tolist()
+        central_stns = station_coords[(station_coords["station_lat"] >= 20) & (station_coords["station_lat"] <= 28)]["station_id"].tolist()
+        south_stns = station_coords[station_coords["station_lat"] < 20]["station_id"].tolist()
 
-        # Assign regions proportionally
-        north = df[df.get("station_lat", pd.Series()) > 28] if "station_lat" in df.columns else pd.DataFrame()
-        central = df[(df.get("station_lat", pd.Series()) >= 20) & (df.get("station_lat", pd.Series()) <= 28)] if "station_lat" in df.columns else pd.DataFrame()
-        south = df[df.get("station_lat", pd.Series()) < 20] if "station_lat" in df.columns else pd.DataFrame()
-
-        train_parts, val_parts, test_parts = [], [], []
-        for region_df in [north, central, south]:
-            if region_df.empty:
+        train_stns, val_stns, test_stns = [], [], []
+        for region_stns in [north_stns, central_stns, south_stns]:
+            if not region_stns:
                 continue
-            n = len(region_df)
-            shuffled = region_df.sample(frac=1, random_state=42)
+            # Shuffle using numpy random with fixed seed for reproducibility
+            region_stns = list(region_stns)
+            np.random.seed(42)
+            np.random.shuffle(region_stns)
+            n = len(region_stns)
             t_end = int(n * train_ratio)
             v_end = int(n * (train_ratio + val_ratio))
-            train_parts.append(shuffled[:t_end])
-            val_parts.append(shuffled[t_end:v_end])
-            test_parts.append(shuffled[v_end:])
+            train_stns.extend(region_stns[:t_end])
+            val_stns.extend(region_stns[t_end:v_end])
+            test_stns.extend(region_stns[v_end:])
 
-        return (
-            pd.concat(train_parts).reset_index(drop=True),
-            pd.concat(val_parts).reset_index(drop=True),
-            pd.concat(test_parts).reset_index(drop=True),
-        )
+        train_set = df[df["station_id"].isin(train_stns)].reset_index(drop=True)
+        val_set = df[df["station_id"].isin(val_stns)].reset_index(drop=True)
+        test_set = df[df["station_id"].isin(test_stns)].reset_index(drop=True)
+
+        return train_set, val_set, test_set
+

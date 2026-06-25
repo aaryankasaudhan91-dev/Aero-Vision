@@ -65,7 +65,8 @@ class CPCBIngestion:
                     "station_type": stn.get("station_type", "CAAQMS"),
                     "is_active": True,
                 }
-                supabase.table("cpcb_stations").upsert(record, on_conflict="station_id").execute()
+                query = supabase.table("cpcb_stations").upsert(record, on_conflict="station_id")
+                await asyncio.to_thread(query.execute)
                 inserted += 1
             except Exception as e:
                 logger.error(f"Error inserting station {stn}: {e}")
@@ -113,14 +114,16 @@ class CPCBIngestion:
                 }
                 batch.append(record)
                 if len(batch) >= 100:
-                    supabase.table("cpcb_observations").upsert(batch, on_conflict="station_id,observed_at").execute()
+                    query = supabase.table("cpcb_observations").upsert(batch, on_conflict="station_id,observed_at")
+                    await asyncio.to_thread(query.execute)
                     inserted += len(batch)
                     batch = []
             except Exception as e:
                 logger.error(f"Error processing observation: {e}")
 
         if batch:
-            supabase.table("cpcb_observations").upsert(batch, on_conflict="station_id,observed_at").execute()
+            query = supabase.table("cpcb_observations").upsert(batch, on_conflict="station_id,observed_at")
+            await asyncio.to_thread(query.execute)
             inserted += len(batch)
 
         logger.info(f"Ingested {inserted} observations for station {station_id}")
@@ -181,11 +184,13 @@ class TROPOMIIngestion:
                     "qa_value": 0.75,
                 })
                 if len(batch) >= 500:
-                    supabase.table("tropomi_products").insert(batch).execute()
+                    query = supabase.table("tropomi_products").insert(batch)
+                    await asyncio.to_thread(query.execute)
                     batch = []
 
         if batch:
-            supabase.table("tropomi_products").insert(batch).execute()
+            query = supabase.table("tropomi_products").insert(batch)
+            await asyncio.to_thread(query.execute)
 
         total = len(grid_data)
         logger.info(f"Ingested {total} TROPOMI {product} records")
@@ -264,13 +269,15 @@ class FIRMSIngestion:
                 }
                 batch.append(record)
                 if len(batch) >= 500:
-                    supabase.table("fire_records").insert(batch).execute()
+                    query = supabase.table("fire_records").insert(batch)
+                    await asyncio.to_thread(query.execute)
                     batch = []
             except Exception as e:
                 logger.error(f"Error processing fire record: {e}")
 
         if batch:
-            supabase.table("fire_records").insert(batch).execute()
+            query = supabase.table("fire_records").insert(batch)
+            await asyncio.to_thread(query.execute)
 
         total = len(batch)
         logger.info(f"Ingested {total} {source} fire records")
@@ -317,7 +324,6 @@ class ERA5Ingestion:
         import zipfile
         import os
         import glob
-
         import tempfile
 
         nc_files = [filepath]
@@ -370,12 +376,14 @@ class ERA5Ingestion:
 
                         batch.append(record)
                         if len(batch) >= 500:
-                            supabase.table("meteorological_data").insert(batch).execute()
+                            query = supabase.table("meteorological_data").insert(batch)
+                            await asyncio.to_thread(query.execute)
                             total_ingested += len(batch)
                             batch = []
 
             if batch:
-                supabase.table("meteorological_data").insert(batch).execute()
+                query = supabase.table("meteorological_data").insert(batch)
+                await asyncio.to_thread(query.execute)
                 total_ingested += len(batch)
 
             ds.close()
@@ -533,12 +541,14 @@ class MOSDACIngestion:
                             "aod_550nm": round(val, 4),
                         })
                         if len(batch) >= 500:
-                            supabase.table("satellite_aod").insert(batch).execute()
+                            query = supabase.table("satellite_aod").insert(batch)
+                            await asyncio.to_thread(query.execute)
                             inserted += len(batch)
                             batch = []
 
             if batch:
-                supabase.table("satellite_aod").insert(batch).execute()
+                query = supabase.table("satellite_aod").insert(batch)
+                await asyncio.to_thread(query.execute)
                 inserted += len(batch)
 
             logger.info(f"Ingested {inserted} daily mean AOD records into satellite_aod")
