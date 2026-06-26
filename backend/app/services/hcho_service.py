@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from app.database import supabase
+from app.services.utils import find_nearest_date
 
 
 class HCHOService:
@@ -16,27 +17,31 @@ class HCHOService:
     ) -> Dict[str, Any]:
         """Get HCHO overview with hotspot summary."""
         target_date = date or datetime.now(timezone.utc).date()
-        obs_data = []
-        attempts = 0
-        current_query_date = target_date
 
-        while attempts < 10:
-            query = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
-            res = await asyncio.to_thread(query.limit(2000).execute)
-            if res.data:
-                obs_data = res.data
-                break
+        current_query_date = find_nearest_date("tropomi_products", "observed_date", target_date, {"product_type": "HCHO"})
 
-            if isinstance(current_query_date, str):
-                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-            current_query_date = current_query_date - timedelta(days=1)
-            attempts += 1
+        query = supabase.table("tropomi_products").select("column_value, latitude, longitude").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
+        res = await asyncio.to_thread(query.limit(2000).execute)
+        obs_data = res.data or []
 
         hcho_vals = [r["column_value"] for r in obs_data if r.get("column_value") is not None]
         avg_hcho = sum(hcho_vals) / len(hcho_vals) if hcho_vals else 0.0
 
         hotspots_data = []
         hotspot_query_date = current_query_date
+        
+        # Dynamic check and calculation to ensure no static mock data is used
+        hq_total = supabase.table("hcho_hotspots").select("id", count="exact").eq("hotspot_date", str(hotspot_query_date))
+        h_total_res = await asyncio.to_thread(hq_total.limit(1).execute)
+        if (h_total_res.count or 0) == 0:
+            try:
+                from app.ml.hcho_hotspot import HCHOHotspotDetector
+                detector = HCHOHotspotDetector()
+                logger.info(f"Dynamically computing HCHO hotspots for date: {hotspot_query_date}")
+                await detector.detect_hotspots(str(hotspot_query_date), str(hotspot_query_date), season or "annual")
+            except Exception as e:
+                logger.error(f"Error computing dynamic HCHO hotspots: {e}")
+
         hq = supabase.table("hcho_hotspots").select("*", count="exact").eq("hotspot_date", str(hotspot_query_date))
         if state:
             hq = hq.eq("state", state)
@@ -102,20 +107,22 @@ class HCHOService:
     ) -> List[Dict]:
         """Get detected HCHO hotspots with filtering."""
         target_date = start_date or datetime.now(timezone.utc).date()
-        attempts = 0
-        current_query_date = target_date
 
-        if start_date == end_date:
-            while attempts < 10:
-                res_query = supabase.table("tropomi_products").select("id").eq("product_type", "HCHO").eq("observed_date", str(current_query_date))
-                res = await asyncio.to_thread(res_query.limit(1).execute)
-                if res.data:
-                    break
-                if isinstance(current_query_date, str):
-                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-                current_query_date = current_query_date - timedelta(days=1)
-                attempts += 1
-
+        if start_date and end_date and start_date == end_date:
+            current_query_date = find_nearest_date("tropomi_products", "observed_date", start_date, {"product_type": "HCHO"})
+            
+            # Dynamic check and calculation to ensure no static mock data is used
+            hq_total = supabase.table("hcho_hotspots").select("id", count="exact").eq("hotspot_date", str(current_query_date))
+            h_total_res = await asyncio.to_thread(hq_total.limit(1).execute)
+            if (h_total_res.count or 0) == 0:
+                try:
+                    from app.ml.hcho_hotspot import HCHOHotspotDetector
+                    detector = HCHOHotspotDetector()
+                    logger.info(f"Dynamically computing HCHO hotspots in get_hotspots for date: {current_query_date}")
+                    await detector.detect_hotspots(str(current_query_date), str(current_query_date), season or "annual")
+                except Exception as e:
+                    logger.error(f"Error computing dynamic HCHO hotspots in get_hotspots: {e}")
+            
             query = supabase.table("hcho_hotspots").select("*").eq("hotspot_date", str(current_query_date))
         else:
             query = supabase.table("hcho_hotspots").select("*")
@@ -123,6 +130,7 @@ class HCHOService:
                 query = query.gte("hotspot_date", str(start_date))
             if end_date:
                 query = query.lte("hotspot_date", str(end_date))
+
 
         if method:
             query = query.eq("detection_method", method)

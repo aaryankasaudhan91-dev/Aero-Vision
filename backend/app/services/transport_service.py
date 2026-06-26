@@ -4,6 +4,7 @@ import asyncio
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from app.database import supabase
+from app.services.utils import find_nearest_date
 import math
 
 
@@ -33,25 +34,15 @@ class TransportService:
 
     async def get_wind_vectors(self, date: date, level: str = "850hpa", bounds: Optional[str] = None) -> List[Dict]:
         """Get wind vector field for map visualization."""
-        attempts = 0
-        current_query_date = date
-        data = []
+        current_query_date = find_nearest_date("meteorological_data", "observed_date", date)
 
-        while attempts < 10:
-            query = supabase.table("meteorological_data").select(
-                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
-                "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
-            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
+        query = supabase.table("meteorological_data").select(
+            "latitude, longitude, u_wind_850hpa, v_wind_850hpa, "
+            "u_wind_10m, v_wind_10m, wind_speed_10m, wind_direction"
+        ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
 
-            result = await asyncio.to_thread(query.limit(5000).execute)
-            if result.data:
-                data = result.data
-                break
-
-            if isinstance(current_query_date, str):
-                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-            current_query_date = current_query_date - timedelta(days=1)
-            attempts += 1
+        result = await asyncio.to_thread(query.limit(5000).execute)
+        data = result.data or []
 
         vectors = []
         for r in data:
@@ -99,28 +90,18 @@ class TransportService:
         self, receptor_lat: float, receptor_lon: float, date: date, hours_back: int = 72
     ) -> Dict:
         """Compute source attribution for a receptor location using wind back-tracking."""
-        attempts = 0
-        current_query_date = date
-        data = []
+        current_query_date = find_nearest_date("meteorological_data", "observed_date", date)
 
-        while attempts < 10:
-            query = supabase.table("meteorological_data").select(
-                "latitude, longitude, u_wind_850hpa, v_wind_850hpa, u_wind_10m, v_wind_10m, wind_speed_10m"
-            ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
-            
-            met_data = await asyncio.to_thread(query.limit(2000).execute)
-
-            if met_data.data:
-                data = met_data.data
-                break
-
-            if isinstance(current_query_date, str):
-                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-            current_query_date = current_query_date - timedelta(days=1)
-            attempts += 1
+        query = supabase.table("meteorological_data").select(
+            "latitude, longitude, u_wind_850hpa, v_wind_850hpa, u_wind_10m, v_wind_10m, wind_speed_10m"
+        ).eq("observed_date", str(current_query_date)).not_.is_("u_wind_10m", "null")
+        
+        met_data = await asyncio.to_thread(query.limit(2000).execute)
+        data = met_data.data or []
 
         if not data:
             return {"receptor": {"lat": receptor_lat, "lon": receptor_lon}, "sources": [], "date": str(date), "trajectory": []}
+
 
         # Simple back-trajectory estimation
         trajectory = [{"lat": receptor_lat, "lon": receptor_lon, "hour": 0}]

@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from loguru import logger
 from app.database import supabase
+from app.services.utils import find_nearest_date
 
 
 class AQIService:
@@ -15,29 +16,27 @@ class AQIService:
     ) -> Dict[str, Any]:
         """Get AQI overview with latest data."""
         target_date = date or datetime.now(timezone.utc).date()
-        observations = []
-        attempts = 0
-        current_query_date = target_date
+        
+        # Build filter dictionary if state/city are given
+        filters = {}
+        if state:
+            filters["cpcb_stations.state"] = state
+        if city:
+            filters["cpcb_stations.city"] = city
+            
+        current_query_date = find_nearest_date("cpcb_observations", "observed_at", target_date, filters)
 
-        while attempts < 10:
-            query = supabase.table("cpcb_observations").select(
-                "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
-            ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
+        query = supabase.table("cpcb_observations").select(
+            "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
+        ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
 
-            if state:
-                query = query.eq("cpcb_stations.state", state)
-            if city:
-                query = query.eq("cpcb_stations.city", city)
+        if state:
+            query = query.eq("cpcb_stations.state", state)
+        if city:
+            query = query.eq("cpcb_stations.city", city)
 
-            result = await asyncio.to_thread(query.order("observed_at", desc=True).limit(2000).execute)
-            if result.data:
-                observations = result.data
-                break
-
-            if isinstance(current_query_date, str):
-                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-            current_query_date = current_query_date - timedelta(days=1)
-            attempts += 1
+        result = await asyncio.to_thread(query.order("observed_at", desc=True).limit(2000).execute)
+        observations = result.data or []
 
         # Compute summary statistics
         aqi_values = [o["aqi"] for o in observations if o.get("aqi")]
@@ -87,28 +86,30 @@ class AQIService:
     ) -> List[Dict]:
         """Get CPCB ground observations."""
         if start_date and end_date and start_date == end_date:
-            attempts = 0
-            current_query_date = start_date
-            while attempts < 10:
-                query = supabase.table("cpcb_observations").select(
-                    "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
-                ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
-                if station_id:
-                    query = query.eq("station_id", station_id)
-                if state:
-                    query = query.eq("cpcb_stations.state", state)
-                if city:
-                    query = query.eq("cpcb_stations.city", city)
+            filters = {}
+            if station_id:
+                filters["station_id"] = station_id
+            if state:
+                filters["cpcb_stations.state"] = state
+            if city:
+                filters["cpcb_stations.city"] = city
+                
+            current_query_date = find_nearest_date("cpcb_observations", "observed_at", start_date, filters)
 
-                result = await asyncio.to_thread(query.limit(limit).execute)
-                if result.data:
-                    return result.data
+            query = supabase.table("cpcb_observations").select(
+                "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
+            ).gte("observed_at", f"{current_query_date}T00:00:00").lte("observed_at", f"{current_query_date}T23:59:59")
+            
+            if station_id:
+                query = query.eq("station_id", station_id)
+            if state:
+                query = query.eq("cpcb_stations.state", state)
+            if city:
+                query = query.eq("cpcb_stations.city", city)
 
-                if isinstance(current_query_date, str):
-                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-                current_query_date = current_query_date - timedelta(days=1)
-                attempts += 1
-            return []
+            result = await asyncio.to_thread(query.limit(limit).execute)
+            return result.data or []
+
         query = supabase.table("cpcb_observations").select(
             "*, cpcb_stations!inner(station_name, city, state, latitude, longitude)"
         )

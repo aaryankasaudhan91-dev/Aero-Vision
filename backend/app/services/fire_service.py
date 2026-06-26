@@ -4,6 +4,7 @@ import asyncio
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from app.database import supabase
+from app.services.utils import find_nearest_date
 
 
 class FireService:
@@ -15,27 +16,23 @@ class FireService:
     ) -> Dict[str, Any]:
         """Get fire overview with counts and FRP summary."""
         target_date = date or datetime.now(timezone.utc).date()
-        fires = []
-        attempts = 0
-        current_query_date = target_date
-
-        while attempts < 10:
-            query = supabase.table("fire_records").select("*", count="exact").eq("detected_date", str(current_query_date))
-            if state:
-                query = query.eq("state", state)
-            if source:
-                query = query.eq("source", source)
+        
+        filters = {}
+        if state:
+            filters["state"] = state
+        if source:
+            filters["source"] = source
             
-            result = await asyncio.to_thread(query.limit(2000).execute)
+        current_query_date = find_nearest_date("fire_records", "detected_date", target_date, filters)
 
-            if result.data:
-                fires = result.data
-                break
-
-            if isinstance(current_query_date, str):
-                current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-            current_query_date = current_query_date - timedelta(days=1)
-            attempts += 1
+        query = supabase.table("fire_records").select("*", count="exact").eq("detected_date", str(current_query_date))
+        if state:
+            query = query.eq("state", state)
+        if source:
+            query = query.eq("source", source)
+        
+        result = await asyncio.to_thread(query.limit(2000).execute)
+        fires = result.data or []
 
         frp_values = [f["frp"] for f in fires if f.get("frp")]
         state_counts = {}
@@ -61,31 +58,29 @@ class FireService:
     ) -> List[Dict]:
         """Get fire records with filtering."""
         if start_date and end_date and start_date == end_date:
-            attempts = 0
-            current_query_date = start_date
-            while attempts < 10:
-                query = supabase.table("fire_records").select("*")
-                query = query.eq("detected_date", str(current_query_date))
-                if state:
-                    query = query.eq("state", state)
-                if source:
-                    query = query.eq("source", source)
-                if fire_type:
-                    query = query.eq("fire_type", fire_type)
-                if min_frp:
-                    query = query.gte("frp", min_frp)
+            filters = {}
+            if state:
+                filters["state"] = state
+            if source:
+                filters["source"] = source
+            if fire_type:
+                filters["fire_type"] = fire_type
                 
-                result = await asyncio.to_thread(query.limit(limit).execute)
-                if result.data:
-                    data = result.data
-                    break
+            current_query_date = find_nearest_date("fire_records", "detected_date", start_date, filters)
 
-                if isinstance(current_query_date, str):
-                    current_query_date = datetime.strptime(current_query_date, "%Y-%m-%d").date()
-                current_query_date = current_query_date - timedelta(days=1)
-                attempts += 1
-            else:
-                data = []
+            query = supabase.table("fire_records").select("*")
+            query = query.eq("detected_date", str(current_query_date))
+            if state:
+                query = query.eq("state", state)
+            if source:
+                query = query.eq("source", source)
+            if fire_type:
+                query = query.eq("fire_type", fire_type)
+            if min_frp:
+                query = query.gte("frp", min_frp)
+            
+            result = await asyncio.to_thread(query.limit(limit).execute)
+            data = result.data or []
         else:
             query = supabase.table("fire_records").select("*")
             if start_date:
