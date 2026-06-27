@@ -257,10 +257,10 @@ class InsightsService:
                         logger.info("Successfully generated all insights using Google Gemini AI.")
                     except Exception as e:
                         from loguru import logger
-                        logger.error(f"Gemini insights generation error: {e}. Falling back to local templates.")
-                        insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
+                        logger.error(f"Gemini insights generation error: {e}.")
+                        insights_list = []
                 else:
-                    insights_list = self._generate_fallback_insights(aqi_stats, fire_stats, hcho_stats, weather_stats)
+                    insights_list = []
 
         # Clear old database insights and insert fresh ones
         try:
@@ -278,64 +278,6 @@ class InsightsService:
 
         return insights_list
 
-    def _generate_fallback_insights(self, aqi_stats: dict, fire_stats: dict, hcho_stats: dict, weather_stats: dict) -> List[Dict]:
-        """Context-aware local fallback generator for scientific insights."""
-        insights = []
-        
-        # 1. AQI Trend
-        avg_aqi = aqi_stats.get("avg_aqi", 145.0)
-        max_aqi = aqi_stats.get("max_aqi", 250)
-        cities = aqi_stats.get("cities", ["Delhi", "Mumbai"])
-        severity = "critical" if avg_aqi > 200 else ("warning" if avg_aqi > 100 else "info")
-        insights.append({
-            "insight_type": "aqi_trend",
-            "title": "Subcontinental Ambient AQI Elevations",
-            "summary": f"CPCB ground stations report a regional average AQI of {avg_aqi:.1f}, with peak values reaching {max_aqi} in metropolitan clusters (e.g., {', '.join(cities[:3])}). Diurnal surface heating patterns indicate particulate trapping beneath a lowering planetary boundary layer.",
-            "detailed_text": "Establish regional airshed restrictions and curtail heavy transport movement during peak evening inversion boundaries.",
-            "severity": severity,
-            "region": "Indo-Gangetic Plain"
-        })
-        
-        # 2. HCHO Hotspots
-        avg_hcho = hcho_stats.get("avg_hcho", 1.45e-4)
-        max_hcho = hcho_stats.get("max_hcho", 2.9e-4)
-        severity = "warning" if avg_hcho > 1.2e-4 else "info"
-        insights.append({
-            "insight_type": "hotspot",
-            "title": "Sentinel-5P HCHO Column Anomalies",
-            "summary": f"Satellite retrievals show elevated formaldehyde (HCHO) columns averaging {avg_hcho:.2e} mol/m², indicating concentrated volatile organic compound (VOC) plumes and secondary photo-oxidation processes.",
-            "detailed_text": "Deploy high-resolution volatile organic monitoring in industrial corridors and forest margins to track biogenic vs anthropogenic VOC fractions.",
-            "severity": severity,
-            "region": "Central & Eastern India"
-        })
-        
-        # 3. Fire Impact
-        fire_count = fire_stats.get("fire_count", 12)
-        avg_frp = fire_stats.get("avg_frp", 32.5)
-        states = fire_stats.get("states", ["Punjab", "Haryana"])
-        severity = "critical" if fire_count > 30 else ("warning" if fire_count > 10 else "info")
-        insights.append({
-            "insight_type": "fire_impact",
-            "title": "Agricultural Biomass Combustion Impact",
-            "summary": f"Satellite sensors detected {fire_count} active thermal anomalies with an average Fire Radiative Power (FRP) of {avg_frp:.1f} MW. High-intensity burn centers are clustered in agricultural zones across {', '.join(states[:2]) if states else 'North India'}.",
-            "detailed_text": "Implement satellite-guided agricultural monitoring and provide sub-surface seeders to reduce open crop residue burning.",
-            "severity": severity,
-            "region": "Northwest India"
-        })
-        
-        # 4. Transport Advection
-        avg_wind = weather_stats.get("avg_wind", 4.1)
-        severity = "warning" if avg_wind > 5.0 else "info"
-        insights.append({
-            "insight_type": "transport",
-            "title": "Advective Plume Transport Vectors",
-            "summary": f"Atmospheric transport coordinates simulate wind vectors carrying plumes down-wind at an average speed of {avg_wind:.1f} m/s, promoting cross-state advection of combustion by-products.",
-            "detailed_text": "Initiate inter-state coordination for pollution monitoring and issue down-wind warnings to receptor cities.",
-            "severity": severity,
-            "region": "Indo-Gangetic Plain"
-        })
-        
-        return insights
 
     async def get_insights(
         self, insight_type: Optional[str] = None, region: Optional[str] = None,

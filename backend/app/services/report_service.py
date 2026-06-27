@@ -603,82 +603,10 @@ class ReportService:
                 )
                 return response.text
             except Exception as e:
-                print(f"Gemini generation error for {section}: {str(e)}. Using database fallback.")
-                return self._generate_scientific_fallback(section, db_context, title, report_type)
+                print(f"Gemini generation error for {section}: {str(e)}.")
+                return f"Error generating section {section} using AI: {str(e)}"
         else:
-            return self._generate_scientific_fallback(section, db_context, title, report_type)
+            return f"Error generating section {section}: No AI API keys are configured."
 
 
-    def _generate_scientific_fallback(self, section: str, db_context: str, title: str, report_type: str) -> str:
-        """Database-context aware local fallback content builder."""
-        if section == "abstract":
-            return (
-                f"This paper/report evaluates the spatial-temporal distribution of "
-                f"ambient air quality, columnar formaldehyde (HCHO) densities, and active thermal anomalies "
-                f"over the Indian subcontinent. Combining ground-based measurements from CPCB monitoring networks "
-                f"with Sentinel-5P TROPOMI satellite products, we construct a comprehensive geospatial mapping "
-                f"framework. Database observations demonstrate key regional air pollution hotspots, influenced by "
-                f"meteorological boundary layers and advection dynamics. Predictive analysis shows high validation accuracy. "
-                f"These findings provide critical insights for regional airshed management and environmental policy directives."
-            )
-        elif section == "introduction":
-            return (
-                f"Ambient air pollution and volatile emissions pose critical health and ecological challenges in India. "
-                f"The Indo-Gangetic Plain (IGP) regularly experiences severe particulate matter (PM2.5 and PM10) "
-                f"concentrations and trace gas accumulations, heavily influenced by weather trends and seasonal crop-residue fires.\n\n"
-                f"To address ground station data density gaps, satellite remote sensing platforms, such as TROPOMI, "
-                f"provide valuable columnar measurements of volatile organic compounds (VOCs) like Formaldehyde (HCHO). "
-                f"This report, titled '{title}', integrates ground observations and satellite datasets to evaluate regional pollution "
-                f"intensity, advection vectors, and atmospheric chemistry over India."
-            )
-        elif section == "methodology":
-            return (
-                f"Our analytical framework combines ground monitoring observations with satellite telemetry:\n\n"
-                f"1. **Spatial Interpolation**: Hourly point AQI values from CPCB stations are mapped across India "
-                f"using Inverse Distance Weighting (IDW) to compile continuous grids.\n\n"
-                f"2. **TROPOMI HCHO Retrievals**: Column density values (mol/m²) are retrieved from Sentinel-5P Level-2 "
-                f"products. Points are filtered for cloud cover limits (< 0.2).\n\n"
-                f"3. **Thermal Cross-Correlation**: VIIRS/MODIS fire anomalies are spatial-temporally correlated "
-                f"with localized formaldehyde hotspots to compute Pearson coefficients and advection wind vectors."
-            )
-        elif section == "datasets":
-            return (
-                f"The geospatial datasets incorporated into the AeroVision platform comprise:\n\n"
-                f"- **CPCB Monitoring Data**: Real-time ground station pollutant levels and national Air Quality Index (AQI) values.\n\n"
-                f"- **TROPOMI HCHO columns**: Sentinel-5P measurements detailing formaldehyde concentrations as a proxy for organic photo-oxidation.\n\n"
-                f"- **MODIS & VIIRS Active Fires**: Thermal anomalies and Fire Radiative Power (FRP) representing agricultural crop-burning events.\n\n"
-                f"- **FourCastNet AI Weather**: Simulated wind velocity coordinates, relative humidity, and planetary boundary layer heights over India."
-            )
-        elif section == "results":
-            return (
-                f"The empirical statistics compiled from active databases show distinct geospatial trends:\n\n"
-                f"**Database Context Statistics Summary:**\n"
-                f"{db_context}\n\n"
-                f"Spatial maps indicate elevated formaldehyde (HCHO) concentrations over forested belts in Central India "
-                f"and industrial clusters in Eastern India. AQI levels show peak values during the post-monsoon winter transition, "
-                f"correlating strongly with active crop residue burning locations in Punjab and Haryana."
-            )
-        elif section == "discussion":
-            return (
-                f"Atmospheric dynamics play a significant role in surface pollutant trapping. Diurnal fluctuations in the boundary layer "
-                f"height explain why evening AQI spikes occur even when emissions remain steady. High-velocity winds simulated by FourCastNet "
-                f"demonstrate transport pathways down the Indo-Gangetic Plain, transporting particulate matter from agrarian burning regions "
-                f"towards metropolitan receptor zones.\n\n"
-                f"Predictive model metrics confirm high forecasting confidence. Incorporating wind advection coordinates and column density "
-                f"inputs into gradient-boosted models improves forecasting accuracy relative to purely temporal historical regression baselines."
-            )
-        elif section == "conclusion":
-            return (
-                f"This study highlights the value of multi-sensor integration for environmental monitoring in India. "
-                f"Biomass burning remains a key driver of localized volatile organic and particulate concentrations. "
-                f"CPCB and ISRO policy actions should emphasize regional airshed pollution warnings and crop-residue "
-                f"mitigation strategies. Future extensions will integrate high-resolution chemical transport models to enhance warning times."
-            )
-        elif section == "references":
-            return (
-                f"1. Central Pollution Control Board (CPCB), Govt. of India. National Air Quality Index Bulletins.\n"
-                f"2. Sentinel-5P TROPOMI Formaldehyde Product Guidelines, ESA/KNMI.\n"
-                f"3. Pathirana, S., et al. (2024). 'Biomass Burning Transport and Chemical Processing over Northern India'. Atmospheric Environment.\n"
-                f"4. Pathak, R., et al. (2025). 'Atmospheric Forecasting using Deep Learning and Physics-based Emulators over South Asia'."
-            )
-        return ""
+
