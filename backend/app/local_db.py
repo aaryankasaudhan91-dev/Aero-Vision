@@ -243,6 +243,17 @@ def init_db():
         subscribed_at TEXT NOT NULL,
         is_active INTEGER DEFAULT 1
     );
+
+    CREATE TABLE IF NOT EXISTS email_dispatches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        subscription_id INTEGER,
+        recipient TEXT NOT NULL,
+        recipient_type TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        body_html TEXT,
+        dispatched_at TEXT NOT NULL,
+        status TEXT DEFAULT 'SENT'
+    );
     """)
 
     # Run column migrations in case tables were previously created without certain columns

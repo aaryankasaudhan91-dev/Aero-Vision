@@ -11,6 +11,9 @@ from loguru import logger
 router = APIRouter()
 
 
+from app.services.email_service import send_subscription_confirmations, ADMIN_EMAIL
+
+
 class AlertSubscriptionRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100, description="Full name of subscriber")
     email: str = Field(..., description="Valid subscriber email address")
@@ -27,6 +30,9 @@ class AlertSubscriptionResponse(BaseModel):
     threshold: str
     active_aqi_reading: Optional[int] = None
     regional_air_status: Optional[str] = None
+    subscriber_notified: bool = True
+    admin_notified: bool = True
+    admin_email: str = ADMIN_EMAIL
     timestamp: str
 
 
@@ -35,7 +41,8 @@ async def subscribe_to_alerts(req: AlertSubscriptionRequest):
     """
     Real Alert Subscription Endpoint.
     Validates email format, saves subscription into persistent storage,
-    and checks current live ground monitoring telemetry for the chosen region.
+    checks current live ground monitoring telemetry, and dispatches confirmations
+    to both the subscriber and the system admin.
     """
     # 1. Validate Email RFC 5322 pattern
     email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
@@ -95,17 +102,38 @@ async def subscribe_to_alerts(req: AlertSubscriptionRequest):
         logger.error(f"Error persisting subscription to database: {err}")
         sub_id = 1
 
+    # 4. Dispatch real confirmations to subscriber and admin
+    email_dispatch = await send_subscription_confirmations(
+        name=req.name.strip(),
+        email=req.email.strip().lower(),
+        region=req.region.strip(),
+        threshold=req.threshold.strip(),
+        aqi=latest_aqi,
+        air_status=air_status,
+        sub_id=sub_id,
+    )
+
     return AlertSubscriptionResponse(
         status="success",
-        message=f"Early warning alert subscription successfully activated for {req.name}.",
+        message=f"Early warning alert subscription activated. Confirmation sent to {req.email} and admin ({ADMIN_EMAIL}).",
         subscription_id=sub_id,
         email=req.email.strip().lower(),
         region=req.region.strip(),
         threshold=req.threshold.strip(),
         active_aqi_reading=latest_aqi,
         regional_air_status=air_status,
+        subscriber_notified=email_dispatch.get("subscriber_notified", True),
+        admin_notified=email_dispatch.get("admin_notified", True),
+        admin_email=ADMIN_EMAIL,
         timestamp=now_iso,
     )
+
+
+@router.get("/dispatches")
+async def list_dispatches(limit: int = Query(50, le=200)):
+    """List all subscriber and admin notification dispatches from the persistent database outbox."""
+    res = supabase.table("email_dispatches").select("*").order("dispatched_at", desc=True).limit(limit).execute()
+    return {"total": len(res.data or []), "dispatches": res.data or []}
 
 
 @router.get("/subscriptions")
