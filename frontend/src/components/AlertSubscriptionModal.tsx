@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { trackAlertSubscription } from '../services/analytics';
+import { alertsApi } from '../services/api';
 
 interface AlertModalProps {
   isOpen: boolean;
@@ -42,6 +43,12 @@ export const AlertSubscriptionModal: React.FC<AlertModalProps> = ({ isOpen, onCl
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [activeTelemetry, setActiveTelemetry] = useState<{
+    subscription_id?: number;
+    active_aqi_reading?: number | null;
+    regional_air_status?: string | null;
+    message?: string;
+  } | null>(null);
 
   // Timing defense against fast bots (< 1.5s)
   const openTimeRef = useRef<number>(Date.now());
@@ -143,22 +150,24 @@ export const AlertSubscriptionModal: React.FC<AlertModalProps> = ({ isOpen, onCl
     lastSubmitTimeRef.current = Date.now();
 
     try {
-      await new Promise((r) => setTimeout(r, 600));
-
-      const existingSubs = JSON.parse(localStorage.getItem('aerovision_alert_subscriptions') || '[]');
-      existingSubs.push({
-        name,
-        email,
-        region,
-        threshold,
-        subscribed_at: new Date().toISOString(),
+      const res = await alertsApi.subscribe({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        region: region.trim(),
+        threshold: threshold.trim(),
       });
-      localStorage.setItem('aerovision_alert_subscriptions', JSON.stringify(existingSubs));
 
+      setActiveTelemetry(res.data);
       trackAlertSubscription(region, threshold);
       setSubmitted(true);
-    } catch (err) {
-      setErrors({ form: 'An unexpected error occurred. Please try again.' });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((d: any) => d.msg || d).join(', ')
+          : (err.message || 'Failed to communicate with alert telemetry backend. Please try again.');
+      setErrors({ form: message });
     } finally {
       setSubmitting(false);
     }
@@ -404,19 +413,53 @@ export const AlertSubscriptionModal: React.FC<AlertModalProps> = ({ isOpen, onCl
             </form>
           </>
         ) : (
-          /* Confirmation State */
-          <div className="text-center py-6 space-y-4">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full flex items-center justify-center text-3xl mx-auto font-bold">
+          /* Confirmation State with Real Live Telemetry */
+          <div className="text-center py-4 space-y-4">
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-full flex items-center justify-center text-3xl mx-auto font-bold shadow-inner">
               ✓
             </div>
-            <h3 className="text-2xl font-bold text-slate-900">Alert Subscription Activated!</h3>
-            <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
-              Real-time atmospheric telemetry and CPCB threshold alerts for <strong className="text-purple-700">{region}</strong> will be dispatched to <strong className="text-purple-700">{email}</strong>.
-            </p>
-            <div className="pt-4">
+            <div>
+              <h3 className="text-2xl font-bold text-slate-900">Alert Subscription Activated!</h3>
+              <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed mt-1">
+                {activeTelemetry?.message || `Real-time atmospheric telemetry and CPCB threshold alerts for ${region} are now actively dispatched.`}
+              </p>
+            </div>
+
+            {/* Real telemetry badge card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto">
+              <div className="flex items-center justify-between text-xs border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Subscription Ref:</span>
+                <span className="font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                  #AV-SUB-{activeTelemetry?.subscription_id ?? 'ACTIVE'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Target Region:</span>
+                <span className="font-semibold text-slate-800">{region}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Dispatch Recipient:</span>
+                <span className="font-semibold text-slate-800">{email}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs border-b border-slate-200 pb-2">
+                <span className="text-slate-500 font-medium">Alert Level Trigger:</span>
+                <span className="font-bold text-amber-700 uppercase">
+                  {threshold} ({threshold === 'poor' ? 'AQI > 200' : threshold === 'severe' ? 'AQI > 400' : 'Any Warning'})
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-slate-500 font-medium">Current Regional Telemetry:</span>
+                <span className="font-bold text-emerald-700 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                  {activeTelemetry?.active_aqi_reading != null ? `AQI ${activeTelemetry.active_aqi_reading} (${activeTelemetry.regional_air_status})` : (activeTelemetry?.regional_air_status || 'Grid Online & Synced')}
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-xl transition-all cursor-pointer border border-slate-300"
+                className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 !text-white text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-sm"
               >
                 Close &amp; Return to Dashboard
               </button>

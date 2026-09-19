@@ -171,4 +171,14 @@ export const healthApi = {
   check: () => apiClient.get('/health'),
 };
 
+// ── Alert Subscriptions API ──
+export const alertsApi = {
+  subscribe: (data: { name: string; email: string; region: string; threshold: string }) =>
+    apiClient.post('/alerts/subscribe', data),
+  getSubscriptions: (params?: { region?: string; limit?: number }) =>
+    apiClient.get('/alerts/subscriptions', { params }),
+  getStatus: (params?: { region?: string }) =>
+    apiClient.get('/alerts/status', { params }),
+};
+
 export default apiClient;
