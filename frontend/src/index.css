@@ -81,6 +81,9 @@ body {
 .text-white {
   color: #0f172a !important;
 }
+button.text-white, button.\!text-white, .btn-primary, [type="submit"], .\!text-white {
+  color: #ffffff !important;
+}
 .text-slate-100 {
   color: #1e293b !important;
 }
