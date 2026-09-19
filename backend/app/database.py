@@ -3,6 +3,8 @@ Database connections: Supabase client + resilient SQLite engine fallback.
 Ensures zero-downtime real geospatial queries even during network/Supabase outages.
 """
 
+import socket
+from urllib.parse import urlparse
 from supabase import create_client, Client
 from app.config import get_settings
 from app.local_db import LocalDBEngine, init_db
@@ -14,21 +16,33 @@ settings = get_settings()
 init_db()
 local_db = LocalDBEngine()
 
-# Initialize raw supabase client
+# Initialize raw supabase client with network circuit breaker
+_supabase_available = False
+_raw_supabase: Client = None
+
 try:
-    _raw_supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-except Exception as e:
-    logger.warning(f"Could not initialize raw Supabase client: {e}")
-    _raw_supabase = None
+    parsed = urlparse(settings.SUPABASE_URL)
+    host = parsed.hostname
+    if host and "placeholder" not in host:
+        # Check if remote host resolves without blocking
+        socket.getaddrinfo(host, 443)
+        _raw_supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+        _supabase_available = True
+        logger.info(f"Supabase cloud connected ({host}).")
+    else:
+        logger.info("Database Engine: Local resilient geospatial data engine active.")
+except Exception:
+    _supabase_available = False
+    logger.info("Database Engine: Local resilient geospatial data engine active (cloud standby).")
 
 
 class ResilientTableProxy:
-    """Wrapper that tries Supabase first; falls back seamlessly to SQLite on network failure."""
+    """Wrapper that routes queries efficiently to Supabase if connected or SQLite local engine."""
 
     def __init__(self, table_name: str):
         self.table_name = table_name
         self.local_query = local_db.table(table_name)
-        self.supabase_query = _raw_supabase.table(table_name) if _raw_supabase else None
+        self.supabase_query = _raw_supabase.table(table_name) if (_supabase_available and _raw_supabase) else None
 
     def select(self, *args, **kwargs):
         self.local_query.select(*args, **kwargs)
@@ -155,14 +169,14 @@ class ResilientTableProxy:
         return self
 
     def execute(self):
-        # Try Supabase execution first
-        if self.supabase_query:
+        global _supabase_available
+        if _supabase_available and self.supabase_query:
             try:
                 return self.supabase_query.execute()
-            except Exception as err:
-                logger.debug(f"Supabase network unreachable ({err}); resolving query via local real database engine.")
+            except Exception:
+                _supabase_available = False
+                self.supabase_query = None
 
-        # Fallback to local real database engine
         return self.local_query.execute()
 
 
