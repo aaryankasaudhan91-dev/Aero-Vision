@@ -110,18 +110,17 @@ export const AlertSubscriptionModal: React.FC<AlertModalProps> = ({ isOpen, onCl
       return;
     }
 
-    // 2. Submission Speed Check: Rapid bots submitting in < 1.5s
+    // 2. Submission Speed Check: Rapid bots submitting in < 200ms
     const elapsed = Date.now() - openTimeRef.current;
-    if (elapsed < 1500) {
+    if (elapsed < 200) {
       setErrors((prev) => ({ ...prev, form: 'Submission too fast. Please take a moment to review before submitting.' }));
       return;
     }
 
-    // 3. Client-Side Rate Limiter: Cooldown 20 seconds between attempts
+    // 3. Client-Side Rate Limiter: Brief 2 second cooldown
     const timeSinceLast = Date.now() - lastSubmitTimeRef.current;
-    if (lastSubmitTimeRef.current > 0 && timeSinceLast < 20000) {
-      const waitSec = Math.ceil((20000 - timeSinceLast) / 1000);
-      setErrors((prev) => ({ ...prev, form: `Rate limit in effect. Please wait ${waitSec}s before submitting again.` }));
+    if (lastSubmitTimeRef.current > 0 && timeSinceLast < 2000) {
+      setErrors((prev) => ({ ...prev, form: 'Please wait a moment before submitting again.' }));
       return;
     }
 
