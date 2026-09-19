@@ -65,17 +65,31 @@ export const ReportsDashboard: React.FC = () => {
     }
   };
 
+  const [formError, setFormError] = useState<string>('');
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setGenerating(true);
+    setFormError('');
+
+    if (!title.trim() || title.trim().length < 5) {
+      setFormError('Document title must be at least 5 characters long.');
+      return;
+    }
 
     const includeSections = Object.entries(sections)
       .filter(([_, enabled]) => enabled)
       .map(([name]) => name);
 
+    if (includeSections.length === 0) {
+      setFormError('Please select at least one analytical section to include in the report.');
+      return;
+    }
+
+    setGenerating(true);
+
     try {
       await reportsApi.generate({
-        title,
+        title: title.trim(),
         report_type: reportType,
         include_sections: includeSections,
       });
@@ -83,7 +97,7 @@ export const ReportsDashboard: React.FC = () => {
       fetchReports();
     } catch (err) {
       console.error("Error generating report:", err);
-      alert('Error compiling research report. Make sure backend is active.');
+      setFormError('Error compiling research report. Please verify that the backend service is operational.');
     } finally {
       setGenerating(false);
     }
@@ -143,6 +157,13 @@ export const ReportsDashboard: React.FC = () => {
         <div className="glass-card p-6 rounded-2xl flex flex-col justify-between h-fit border border-slate-200 bg-white/5">
           <form onSubmit={handleGenerate} className="space-y-4">
             <h3 className="text-sm font-semibold text-slate-200">Compile Research Document</h3>
+
+            {formError && (
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{formError}</span>
+              </div>
+            )}
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Document Title</label>
