@@ -1,1 +1,8 @@
-credentials
+credentials/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+__pycache__/
+*.pyc
+.env

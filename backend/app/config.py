@@ -3,13 +3,20 @@ Application configuration loaded from environment variables.
 All secrets and service URLs are centralized here — no hardcoded values.
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
 
 
 class Settings(BaseSettings):
     """Application settings loaded from .env file."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
 
     # ── Supabase ──
     SUPABASE_URL: str
@@ -20,6 +27,12 @@ class Settings(BaseSettings):
     # ── Google Earth Engine ──
     GEE_PROJECT_ID: str = ""
     GEE_SERVICE_ACCOUNT_PATH: str = ""
+    GEE_SERVICE_ACCOUNT_JSON: str = ""
+
+    # ── Email & Alert Dispatch System (Resend API) ──
+    ALERT_ADMIN_EMAIL: str = "aaryankasaudhan91@gmail.com"
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "AeroVision Alerts <onboarding@resend.dev>"
 
     # ── Application ──
     APP_ENV: str = "development"
@@ -40,11 +53,6 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
 
 
 @lru_cache()

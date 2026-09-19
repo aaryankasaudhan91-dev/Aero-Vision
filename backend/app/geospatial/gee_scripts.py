@@ -4,6 +4,9 @@ Extracts NO₂, SO₂, CO, O₃, HCHO daily composites over India.
 """
 
 import ee
+import json
+import base64
+from pathlib import Path
 from datetime import date, timedelta
 from typing import List, Dict, Optional
 from loguru import logger
@@ -13,16 +16,56 @@ settings = get_settings()
 
 
 def initialize_gee():
-    """Initialize Google Earth Engine with service account."""
-    if settings.GEE_SERVICE_ACCOUNT_PATH:
-        credentials = ee.ServiceAccountCredentials(
-            settings.GEE_PROJECT_ID,
-            settings.GEE_SERVICE_ACCOUNT_PATH
-        )
-        ee.Initialize(credentials, project=settings.GEE_PROJECT_ID)
+    """Initialize Google Earth Engine with service account from env var or file."""
+    project_id = settings.GEE_PROJECT_ID
+    credentials = None
+
+    # 1. Try GEE_SERVICE_ACCOUNT_JSON from env (supports raw JSON string or base64)
+    if settings.GEE_SERVICE_ACCOUNT_JSON:
+        raw_val = settings.GEE_SERVICE_ACCOUNT_JSON.strip()
+        try:
+            if not raw_val.startswith("{"):
+                raw_val = base64.b64decode(raw_val).decode("utf-8")
+
+            key_dict = json.loads(raw_val)
+            if not project_id and "project_id" in key_dict:
+                project_id = key_dict["project_id"]
+
+            credentials = ee.ServiceAccountCredentials(
+                key_data=json.dumps(key_dict)
+            )
+            logger.info("Configured GEE credentials from GEE_SERVICE_ACCOUNT_JSON env variable")
+        except Exception as e:
+            logger.error(f"Failed to parse GEE_SERVICE_ACCOUNT_JSON: {e}")
+            raise
+
+    # 2. Fall back to GEE_SERVICE_ACCOUNT_PATH if credentials not set
+    if not credentials and settings.GEE_SERVICE_ACCOUNT_PATH:
+        cred_path = Path(settings.GEE_SERVICE_ACCOUNT_PATH)
+        if not cred_path.is_file():
+            # Try resolving relative to backend directory
+            alt_path = Path(__file__).resolve().parent.parent.parent / settings.GEE_SERVICE_ACCOUNT_PATH.lstrip("./")
+            if alt_path.is_file():
+                cred_path = alt_path
+
+        if cred_path.is_file():
+            credentials = ee.ServiceAccountCredentials(
+                project_id or None,
+                str(cred_path)
+            )
+            logger.info(f"Configured GEE credentials from file: {cred_path}")
+        else:
+            logger.warning(f"GEE service account file not found at: {settings.GEE_SERVICE_ACCOUNT_PATH}")
+
+    # 3. Initialize Earth Engine
+    if credentials:
+        ee.Initialize(credentials, project=project_id or None)
+    elif project_id:
+        ee.Initialize(project=project_id)
     else:
-        ee.Initialize(project=settings.GEE_PROJECT_ID)
-    logger.info("Google Earth Engine initialized")
+        ee.Initialize()
+
+    logger.info(f"Google Earth Engine initialized successfully (project: {project_id or 'default'})")
 
 
 def get_india_geom():
