@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  
+  <!-- Primary National Dashboard -->
+  <url>
+    <loc>https://aerovision.in/</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Air Quality Index (AQI) Overview -->
+  <url>
+    <loc>https://aerovision.in/aqi</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Pollutant Distribution Maps -->
+  <url>
+    <loc>https://aerovision.in/pollutants</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Public Health Exposure & Early Warnings -->
+  <url>
+    <loc>https://aerovision.in/health</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Sentinel-5P HCHO Hotspot Detection -->
+  <url>
+    <loc>https://aerovision.in/hcho</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- NASA FIRMS Active Fire Correlation -->
+  <url>
+    <loc>https://aerovision.in/fire</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Atmospheric Transport & Wind Pathways -->
+  <url>
+    <loc>https://aerovision.in/transport</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ERA5 Weather & FourCastNet Dynamics -->
+  <url>
+    <loc>https://aerovision.in/weather</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Automated AI Atmospheric Insights -->
+  <url>
+    <loc>https://aerovision.in/insights</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Research & Policy Reports -->
+  <url>
+    <loc>https://aerovision.in/reports</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Privacy Policy (DPDP Act, GDPR, CCPA) -->
+  <url>
+    <loc>https://aerovision.in/privacy</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Terms & Conditions of Geospatial Service -->
+  <url>
+    <loc>https://aerovision.in/terms</loc>
+    <lastmod>2026-09-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>

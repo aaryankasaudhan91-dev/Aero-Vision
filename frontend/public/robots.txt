@@ -1,0 +1,26 @@
+# AeroVision Robots Exclusion Protocol
+# https://aerovision.in/robots.txt
+
+User-agent: *
+Allow: /
+Allow: /aqi
+Allow: /pollutants
+Allow: /health
+Allow: /hcho
+Allow: /fire
+Allow: /transport
+Allow: /weather
+Allow: /insights
+Allow: /reports
+Allow: /privacy
+Allow: /terms
+
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*?*filter=
+
+# Crawl Delay to prevent geospatial server overload
+Crawl-delay: 2
+
+# XML Sitemap Location
+Sitemap: https://aerovision.in/sitemap.xml

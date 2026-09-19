@@ -1,0 +1,27 @@
+{
+  "name": "AeroVision — Satellite Atmospheric Intelligence",
+  "short_name": "AeroVision",
+  "description": "National-Scale Surface AQI & HCHO Hotspot Prediction Platform over India",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
