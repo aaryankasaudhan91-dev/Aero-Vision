@@ -263,9 +263,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
   }, [points, dataType]);
 
   return (
-    <div className="w-full h-full relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50">
+    <div className="w-full h-full relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 isolate z-0">
       {/* Floating Display Mode & Wind Toggles */}
-      <div className="absolute top-4 right-4 z-[999] glass-card p-1.5 rounded-lg border border-slate-200 flex gap-2 shadow-md pointer-events-auto">
+      <div className="absolute top-4 right-4 z-10 glass-card p-1.5 rounded-lg border border-slate-200 flex gap-2 shadow-md pointer-events-auto">
         <div className="flex gap-1 border-r border-slate-200 pr-2">
           {(['smooth', 'hybrid', 'grid'] as const).map(mode => (
             <button
@@ -306,10 +306,10 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         className="w-full h-full"
         style={{ height: '100%', width: '100%', background: '#f8fafc' }}
       >
-        {/* Beautiful Light-Themed Voyager Map Layer */}
+        {/* Beautiful Light-Themed OpenStreetMap Layer (Watermark-Free & Open) */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
         {/* Render the smooth continuous color overlay image */}
@@ -348,33 +348,29 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
             <CircleMarker
               key={`${pt.latitude}-${pt.longitude}-${idx}`}
               center={[pt.latitude, pt.longitude]}
-              radius={isSmoothOnly ? 12 : markerRadius}
+              radius={markerRadius}
               pathOptions={{
+                color: '#ffffff',
+                weight: 1.5,
                 fillColor: color,
-                color: isSmoothOnly ? 'transparent' : '#ffffff',
-                weight: isSmoothOnly ? 0 : 1.2,
-                fillOpacity: isSmoothOnly ? 0 : 0.75,
-                opacity: isSmoothOnly ? 0 : 0.9
+                fillOpacity: isSmoothOnly ? 0.05 : 0.9,
               }}
             >
-              <Tooltip direction="top" offset={[0, -5]} opacity={0.95}>
-                <div className="bg-slate-950 text-white p-2 rounded-lg text-[11px] font-sans border border-slate-800 shadow-md">
-                  <div className="font-bold text-purple-400 mb-0.5">{pt.state || 'Observation Point'}</div>
-                  <div className="text-slate-300">
-                    Lat: <span className="text-white font-medium">{pt.latitude.toFixed(2)}</span>, 
-                    Lon: <span className="text-white font-medium">{pt.longitude.toFixed(2)}</span>
+              <Tooltip direction="top" offset={[0, -5]} opacity={1}>
+                <div className="text-xs p-1">
+                  <div className="font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
+                    {pt.state ? `${pt.state} — ` : ''}{pt.label ? pt.label.split('(')[0] : 'Node'}
                   </div>
-                  <div className="text-slate-300 mt-1">
-                    {variableName}: <span className="text-emerald-400 font-extrabold">{pt.value} {unit}</span>
+                  <div className="flex justify-between gap-4 text-slate-600">
+                    <span>{variableName}:</span>
+                    <span className="font-mono font-bold" style={{ color: color }}>
+                      {typeof pt.value === 'number' ? pt.value.toFixed(1) : pt.value} {unit}
+                    </span>
                   </div>
-                  {pt.wind_direction !== undefined && pt.wind_speed !== undefined && (
-                    <div className="text-slate-300 mt-0.5">
-                      Wind: <span className="text-cyan-400 font-bold">{pt.wind_speed} m/s</span> from <span className="text-cyan-400 font-bold">{pt.wind_direction}°</span>
-                    </div>
-                  )}
-                  {pt.label && !pt.label.includes('(') && (
-                    <div className="text-[10px] text-slate-400 mt-1 border-t border-slate-800/80 pt-1">
-                      {pt.label}
+                  {pt.wind_speed !== undefined && (
+                    <div className="flex justify-between gap-4 text-slate-500 text-[10px] mt-0.5">
+                      <span>Wind:</span>
+                      <span className="font-mono">{pt.wind_speed.toFixed(1)} m/s ({pt.wind_direction?.toFixed(0)}°)</span>
                     </div>
                   )}
                   {pt.label && pt.label.includes('(') && (
@@ -390,7 +386,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       </MapContainer>
       
       {/* Sleek Floating Custom Legend */}
-      <div className="absolute bottom-4 right-4 z-[999] glass-card p-3.5 rounded-xl border border-slate-200 text-[10px] space-y-2 text-slate-700 pointer-events-auto shadow-lg">
+      <div className="absolute bottom-4 right-4 z-10 glass-card p-3.5 rounded-xl border border-slate-200 text-[10px] space-y-2 text-slate-700 pointer-events-auto shadow-lg">
         <div className="font-bold text-slate-900 uppercase tracking-wider text-[9px] border-b border-slate-100 pb-1 mb-1">
           {variableName} Legend
         </div>

@@ -46,9 +46,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   );
 
   return (
-    <div className="w-full h-full relative group">
+    <div className="w-full h-full relative group isolate z-0">
       {/* 2D / 3D Toggle Controller */}
-      <div className="absolute top-4 left-4 z-[999] glass-card p-1 rounded-lg border border-slate-200 flex gap-1 shadow-lg pointer-events-auto transition-opacity duration-300 opacity-90 hover:opacity-100">
+      <div className="absolute top-4 left-4 z-10 glass-card p-1 rounded-lg border border-slate-200 flex gap-1 shadow-lg pointer-events-auto transition-opacity duration-300 opacity-90 hover:opacity-100">
         <button
           onClick={() => setMapMode('2D')}
           className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 ${
