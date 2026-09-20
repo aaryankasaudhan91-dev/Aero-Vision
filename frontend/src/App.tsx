@@ -51,14 +51,18 @@ const DashboardLoadingSkeleton = () => (
 );
 
 function App() {
-  // Read initial route from URL hash if present
-  const getInitialTab = () => {
+  // Read initial route from URL hash or pathname if present
+  const parseCurrentRoute = () => {
     const hash = window.location.hash.replace('#/', '').replace('#', '').trim();
-    if (!hash) return 'aqi';
-    return hash;
+    if (hash) return hash;
+
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').trim();
+    if (path && path !== 'index.html') return path;
+
+    return 'aqi';
   };
 
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const [activeTab, setActiveTab] = useState(parseCurrentRoute);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [latency, setLatency] = useState(12);
   const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -75,22 +79,27 @@ function App() {
     }
   }, []);
 
-  // Synchronize activeTab with URL hash for clean deep-linking & SEO indexing
+  // Synchronize activeTab with URL hash and browser history (popstate)
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#/', '').replace('#', '').trim();
-      if (hash) {
-        setActiveTab(hash);
-      }
+    const handleLocationChange = () => {
+      const nextTab = parseCurrentRoute();
+      setActiveTab(nextTab);
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleTabChange = (tabId: string = 'aqi') => {
     setActiveTab(tabId);
     window.location.hash = tabId;
+    if (window.location.pathname !== '/' && window.location.pathname !== '') {
+      window.history.replaceState(null, '', `/#${tabId}`);
+    }
     trackTabChange(tabId, tabId);
     trackPageView(`/${tabId}`, `AeroVision — ${tabId.toUpperCase()}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -162,7 +171,7 @@ function App() {
       default:
         // Render custom 404 page if unknown route
         if (!VALID_TABS.includes(activeTab)) {
-          return <NotFound onNavigateHome={handleTabChange} />;
+          return <NotFound onNavigateHome={handleTabChange} attemptedRoute={activeTab} />;
         }
         return <AqiDashboard />;
     }

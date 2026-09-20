@@ -136,7 +136,7 @@ export const PollutantDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Spatial 3D / 2D Map */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
+        <div className="lg:col-span-2 glass-card p-3 sm:p-4 rounded-2xl h-[420px] sm:h-[480px] lg:h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-heading font-bold text-slate-900">
               {selectedPollutant} Spatial Concentration Map
@@ -170,7 +170,7 @@ export const PollutantDashboard: React.FC = () => {
         </div>
 
         {/* Top 10 Polluted Stations Chart */}
-        <div className="glass-card p-5 rounded-2xl h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
+        <div className="glass-card p-4 sm:p-5 rounded-2xl h-auto lg:h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">

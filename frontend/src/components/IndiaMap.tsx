@@ -219,12 +219,12 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   return (
     <div className="w-full h-full relative group isolate z-0 overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800">
       {/* Floating Header Controls */}
-      <div className="absolute top-4 right-4 z-30 flex items-center gap-2 pointer-events-auto">
+      <div className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 z-30 flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
         {/* 2D / 3D Switcher */}
         <div className="glass-panel p-1 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md flex gap-1 shadow-sm">
           <button
             onClick={() => setMapMode('2D')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 ${
               mapMode === '2D'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100/80 dark:hover:bg-slate-800'
@@ -232,11 +232,11 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             aria-label="Switch to 2D Planar GIS Map"
           >
             <span>🗺️</span>
-            <span>2D GIS</span>
+            <span>2D</span>
           </button>
           <button
             onClick={() => setMapMode('3D')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 ${
               mapMode === '3D'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100/80 dark:hover:bg-slate-800'
@@ -244,19 +244,19 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             aria-label="Switch to 3D WebGL Orbit Map"
           >
             <span>🌐</span>
-            <span>3D WebGL</span>
+            <span>3D</span>
           </button>
         </div>
 
         {/* Full Screen Button */}
         <button
           onClick={toggleEnlarge}
-          className="glass-panel px-3 py-2 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1.5 shadow-sm text-slate-700 dark:text-slate-200 hover:text-slate-950 hover:bg-slate-100/80 dark:hover:bg-slate-800"
+          className="glass-panel px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm text-slate-700 dark:text-slate-200 hover:text-slate-950 hover:bg-slate-100/80 dark:hover:bg-slate-800"
           title="Cover Full Screen"
           aria-label="Cover Full Screen"
         >
           <span>⤢</span>
-          <span>Full Screen</span>
+          <span className="hidden sm:inline">Full Screen</span>
         </button>
       </div>
 

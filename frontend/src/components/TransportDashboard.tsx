@@ -19,12 +19,8 @@ import FilterBar from './FilterBar';
 
 export const TransportDashboard: React.FC = () => {
   const [selectedState, setSelectedState] = useState('');
-  const getYesterdayString = () => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  };
-  const [selectedDate, setSelectedDate] = useState(getYesterdayString());
+  const getTodayString = () => new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [loading, setLoading] = useState(false);
 
   const [metrics, setMetrics] = useState({
@@ -251,7 +247,7 @@ export const TransportDashboard: React.FC = () => {
       {/* Map & Diagrams */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Spatial Map with Trajectory Polylines */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
+        <div className="lg:col-span-2 glass-card p-3 sm:p-4 rounded-2xl h-[420px] sm:h-[480px] lg:h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-heading font-bold text-slate-900">
               Lagrangian Back-Trajectories & Wind Field
@@ -288,7 +284,7 @@ export const TransportDashboard: React.FC = () => {
         </div>
 
         {/* Source Contribution & Wind Rose */}
-        <div className="glass-card p-5 rounded-2xl h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
+        <div className="glass-card p-4 sm:p-5 rounded-2xl h-auto lg:h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
           <div className="h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">

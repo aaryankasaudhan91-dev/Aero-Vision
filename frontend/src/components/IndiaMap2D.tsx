@@ -269,13 +269,13 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 isolate z-0">
       {/* Floating Display Mode & Wind Flow Toggles (Positioned under 2D/3D selector) */}
-      <div className="absolute top-16 right-4 z-10 glass-card p-1.5 rounded-xl border border-slate-200/90 flex items-center gap-2 shadow-sm pointer-events-auto">
-        <div className="flex gap-1 border-r border-slate-200 pr-2">
+      <div className="absolute top-12 sm:top-16 right-2 sm:right-4 z-10 glass-card p-1 sm:p-1.5 rounded-xl border border-slate-200/90 flex items-center gap-1.5 sm:gap-2 shadow-sm pointer-events-auto">
+        <div className="flex gap-0.5 sm:gap-1 border-r border-slate-200 pr-1.5 sm:pr-2">
           {(['smooth', 'hybrid', 'grid'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setDisplayMode(mode)}
-              className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold uppercase tracking-wider transition-all duration-150 ${
+              className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md text-[8px] sm:text-[9px] font-heading font-bold uppercase tracking-wider transition-all duration-150 ${
                 displayMode === mode
                   ? 'bg-purple-600 text-white shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
@@ -287,7 +287,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         </div>
         <button
           onClick={() => setShowWind(!showWind)}
-          className={`px-2.5 py-1 rounded-md text-[10px] font-heading font-semibold transition-all duration-150 flex items-center gap-1.5 ${
+          className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md text-[9px] sm:text-[10px] font-heading font-semibold transition-all duration-150 flex items-center gap-1 sm:gap-1.5 ${
             showWind
               ? 'bg-sky-600 text-white shadow-xs'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -295,7 +295,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           title="Toggle Real-Time Animated Wind Streamlines Overlay"
         >
           <span className={showWind ? "animate-pulse" : ""}>🌬️</span>
-          <span>Wind Flow {showWind ? 'ON' : 'OFF'}</span>
+          <span>Wind {showWind ? 'ON' : 'OFF'}</span>
         </button>
       </div>
 
@@ -405,8 +405,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       </MapContainer>
       
       {/* Sleek Floating Custom Legend */}
-      <div className="absolute bottom-4 right-4 z-10 glass-card p-3.5 rounded-xl border border-slate-200 text-[10px] space-y-2 text-slate-700 pointer-events-auto shadow-lg">
-        <div className="font-bold text-slate-900 uppercase tracking-wider text-[9px] border-b border-slate-100 pb-1 mb-1">
+      <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 z-10 glass-card p-2 sm:p-3.5 rounded-xl border border-slate-200 text-[9px] sm:text-[10px] space-y-1 sm:space-y-2 text-slate-700 pointer-events-auto shadow-lg max-h-[145px] sm:max-h-none overflow-y-auto max-w-[155px] sm:max-w-none">
+        <div className="font-bold text-slate-900 uppercase tracking-wider text-[8px] sm:text-[9px] border-b border-slate-100 pb-0.5 sm:pb-1 mb-0.5 sm:mb-1">
           {variableName} Legend
         </div>
         <div className="flex flex-col gap-1.5">

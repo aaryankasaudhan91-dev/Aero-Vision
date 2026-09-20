@@ -1,12 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMap } from 'react-leaflet';
 import { isPointInIndia } from '../utils/indiaMask';
+import { transportApi } from '../services/api';
 
 export interface WindPoint {
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
+  lat?: number;
+  lon?: number;
   wind_direction?: number;
   wind_speed?: number;
+  direction?: number;
+  speed?: number;
+  u?: number;
+  v?: number;
 }
 
 interface WindStreamlinesOverlayProps {
@@ -23,6 +30,15 @@ interface Particle {
   trail: Array<{ x: number; y: number }>;
 }
 
+interface VectorPoint {
+  lat: number;
+  lon: number;
+  u: number;
+  v: number;
+  speed: number;
+  direction: number;
+}
+
 export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
   points = [],
   visible = true,
@@ -30,6 +46,44 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
   const map = useMap();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const [liveVectors, setLiveVectors] = useState<VectorPoint[]>([]);
+
+  // 1. Fetch real-time meteorological wind vectors from backend
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchRealTimeWind = async () => {
+      try {
+        const res = await transportApi.getWindVectors();
+        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped: VectorPoint[] = res.data.map((item: any) => ({
+            lat: item.lat ?? item.latitude,
+            lon: item.lon ?? item.longitude,
+            u: item.u ?? -Math.sin(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
+            v: item.v ?? -Math.cos(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
+            speed: item.speed ?? Math.sqrt((item.u ?? 0) ** 2 + (item.v ?? 0) ** 2),
+            direction: item.direction ?? ((Math.atan2(-(item.u ?? 0), -(item.v ?? 0)) * 180) / Math.PI + 360) % 360,
+          }));
+          setLiveVectors(mapped);
+        }
+      } catch (err) {
+        console.warn('Real-time wind vector telemetry fallback to synoptic mode:', err);
+      }
+    };
+
+    fetchRealTimeWind();
+
+    // Re-fetch on global auto-refresh trigger
+    const onRefresh = () => {
+      fetchRealTimeWind();
+    };
+    window.addEventListener('refresh-active-dashboard', onRefresh);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('refresh-active-dashboard', onRefresh);
+    };
+  }, []);
 
   useEffect(() => {
     if (!visible) {
@@ -47,7 +101,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
     const container = map.getContainer();
     if (!container) return;
 
-    // 1. Create or retrieve absolute canvas element over map
+    // 2. Create or retrieve absolute canvas element over map
     let canvas = canvasRef.current;
     if (!canvas) {
       canvas = document.createElement('canvas');
@@ -78,43 +132,89 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
 
     resizeCanvas();
 
-    // 2. Filter known wind points for interpolation
-    const knownWindPoints = points.filter(
-      pt => pt.wind_direction !== undefined && pt.wind_speed !== undefined
-    );
+    // 3. Build unified vector pool from props or live fetched vectors
+    const vectorPool: VectorPoint[] = [];
 
-    // Helper: sample wind vector (speed in m/s, direction in degrees)
+    // Prioritize valid wind vectors passed in props
+    if (points && points.length > 0) {
+      for (let i = 0; i < points.length; i++) {
+        const pt = points[i];
+        const lat = pt.latitude ?? pt.lat;
+        const lon = pt.longitude ?? pt.lon;
+        const dir = pt.wind_direction ?? pt.direction;
+        const spd = pt.wind_speed ?? pt.speed;
+
+        if (lat !== undefined && lon !== undefined && dir !== undefined && spd !== undefined) {
+          const rad = (dir * Math.PI) / 180;
+          vectorPool.push({
+            lat,
+            lon,
+            u: pt.u ?? -Math.sin(rad) * spd,
+            v: pt.v ?? -Math.cos(rad) * spd,
+            speed: spd,
+            direction: dir,
+          });
+        }
+      }
+    }
+
+    // If points had no wind vectors, use the real-time live vectors from Supabase ERA5
+    if (vectorPool.length === 0 && liveVectors.length > 0) {
+      vectorPool.push(...liveVectors);
+    }
+
+    // 4. Build high-performance 1-degree spatial hash grid for instant O(1) interpolation
+    const spatialGrid = new Map<string, VectorPoint[]>();
+    for (let i = 0; i < vectorPool.length; i++) {
+      const v = vectorPool[i];
+      const key = `${Math.floor(v.lat)}_${Math.floor(v.lon)}`;
+      let list = spatialGrid.get(key);
+      if (!list) {
+        list = [];
+        spatialGrid.set(key, list);
+      }
+      list.push(v);
+    }
+
+    // Helper: sample wind vector (speed in m/s, direction in degrees) using spatial grid
     const getLocalWind = (lat: number, lon: number): { speed: number; direction: number } => {
-      if (knownWindPoints.length > 0) {
-        let totalW = 0;
+      if (vectorPool.length > 0) {
+        const baseLat = Math.floor(lat);
+        const baseLon = Math.floor(lon);
         let uSum = 0;
         let vSum = 0;
-        // Sample nearest 5 points
-        for (let i = 0; i < knownWindPoints.length; i++) {
-          const pt = knownWindPoints[i];
-          const d2 = (pt.latitude - lat) ** 2 + (pt.longitude - lon) ** 2;
-          const w = 1 / (d2 + 0.2);
-          const rad = ((pt.wind_direction || 0) * Math.PI) / 180;
-          const spd = pt.wind_speed || 4.0;
-          // Meteorological convention: direction wind is blowing from
-          const u = -Math.sin(rad) * spd;
-          const v = -Math.cos(rad) * spd;
-          uSum += u * w;
-          vSum += v * w;
-          totalW += w;
+        let totalW = 0;
+
+        // Search 3x3 neighboring 1-degree cells
+        for (let dLat = -1; dLat <= 1; dLat++) {
+          for (let dLon = -1; dLon <= 1; dLon++) {
+            const key = `${baseLat + dLat}_${baseLon + dLon}`;
+            const cellPoints = spatialGrid.get(key);
+            if (cellPoints) {
+              for (let i = 0; i < cellPoints.length; i++) {
+                const pt = cellPoints[i];
+                const d2 = (pt.lat - lat) ** 2 + (pt.lon - lon) ** 2;
+                if (d2 < 6.0) {
+                  const w = 1 / (d2 + 0.15);
+                  uSum += pt.u * w;
+                  vSum += pt.v * w;
+                  totalW += w;
+                }
+              }
+            }
+          }
         }
+
         if (totalW > 0) {
           const u = uSum / totalW;
           const v = vSum / totalW;
           const spd = Math.sqrt(u * u + v * v);
           const dir = (Math.atan2(-u, -v) * 180) / Math.PI;
-          return { speed: Math.max(1.8, spd), direction: (dir + 360) % 360 };
+          return { speed: Math.max(1.5, spd), direction: (dir + 360) % 360 };
         }
       }
 
-      // Realistic meteorological synoptic wind field across the Indian Subcontinent
-      // Indo-Gangetic trough: North-westerly airflow (300-320 deg)
-      // Peninsula: Westerly/South-westerly airflow (250-280 deg)
+      // Meteorological synoptic Indian Subcontinent baseline fallback
       let baseDir = 305;
       let baseSpd = 4.5;
       if (lat < 18) {
@@ -130,8 +230,9 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       return { speed: baseSpd, direction: (baseDir + 360) % 360 };
     };
 
-    // 3. Initialize Particle Pool
-    const PARTICLE_COUNT = 320;
+    // 5. Initialize Responsive Particle Pool (150 on mobile for 60fps, 300 on desktop)
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const PARTICLE_COUNT = isMobile ? 150 : 300;
     const particles: Particle[] = [];
 
     const spawnParticle = (p?: Particle): Particle => {
@@ -141,7 +242,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       const minLon = Math.max(68.0, bounds.getWest());
       const maxLon = Math.min(97.5, bounds.getEast());
 
-      // Guarantee particle is spawned inside India
+      // Guarantee particle is spawned inside India territory
       let lat = 22.0;
       let lon = 78.0;
       let attempts = 0;
@@ -170,7 +271,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       target.lat = lat;
       target.lon = lon;
       target.age = 0;
-      target.maxAge = 85 + Math.floor(Math.random() * 70);
+      target.maxAge = 80 + Math.floor(Math.random() * 65);
       target.speed = wind.speed;
       target.trail = [];
       return target;
@@ -178,14 +279,13 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const p = spawnParticle();
-      // Stagger ages so particles don't all die at once
       p.age = Math.floor(Math.random() * p.maxAge);
       particles.push(p);
     }
 
-    // 4. Animation loop with continuous flowing trails
-    const MAX_TRAIL_LENGTH = 16;
-    const SPEED_SCALE = 0.0032; // Lat/lon step multiplier per m/s
+    // 6. Animation loop with continuous flowing trails & velocity-graded colors
+    const MAX_TRAIL_LENGTH = isMobile ? 12 : 16;
+    const SPEED_SCALE = 0.0034; // Lat/lon step multiplier per m/s
 
     const render = () => {
       if (!canvas || !ctx) return;
@@ -194,7 +294,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       const width = canvas.width;
       const height = canvas.height;
 
-      // Clear the canvas cleanly each frame to preserve underlying map sharpness
+      // Clear the canvas cleanly each frame to preserve underlying map clarity
       ctx.clearRect(0, 0, width, height);
 
       const bounds = map.getBounds();
@@ -223,7 +323,6 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
         // Get current screen coordinate
         const screenPt = map.latLngToContainerPoint([p.lat, p.lon]);
 
-        // Check if screen point is within visible area
         if (
           screenPt.x < -30 ||
           screenPt.x > width + 30 ||
@@ -239,18 +338,17 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
           p.trail.shift();
         }
 
-        // Compute local wind vector to advance position
+        // Advance particle along real-time wind vector
         const wind = getLocalWind(p.lat, p.lon);
         p.speed = wind.speed;
         const rad = (wind.direction * Math.PI) / 180;
-        // Direction blowing towards
-        const u = -Math.sin(rad) * wind.speed; // longitude delta
-        const v = -Math.cos(rad) * wind.speed; // latitude delta
+        const u = -Math.sin(rad) * wind.speed;
+        const v = -Math.cos(rad) * wind.speed;
 
         p.lon += u * SPEED_SCALE;
         p.lat += v * SPEED_SCALE;
 
-        // Draw smooth continuous streamline trail
+        // Draw smooth streamline trail
         const trailLen = p.trail.length;
         if (trailLen >= 2) {
           const lifeProgress = p.age / p.maxAge;
@@ -261,7 +359,13 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
             overallAlpha = ((1 - lifeProgress) / 0.2) * 0.85;
           }
 
-          // Draw multi-segment gradient trail from tail to head
+          // Real-time velocity color grading:
+          // Gentle (< 3.0 m/s): sky blue / cyan
+          // Moderate (3.0 - 6.0 m/s): vibrant cyan / teal
+          // High (> 6.0 m/s): warm amber / gold
+          const isHighWind = p.speed > 5.5;
+          const isModerate = p.speed >= 3.0 && p.speed <= 5.5;
+
           for (let t = 0; t < trailLen - 1; t++) {
             const p0 = p.trail[t];
             const p1 = p.trail[t + 1];
@@ -270,17 +374,27 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
             ctx.beginPath();
             ctx.moveTo(p0.x, p0.y);
             ctx.lineTo(p1.x, p1.y);
-            ctx.strokeStyle = `rgba(2, 132, 199, ${segAlpha})`;
+
+            if (isHighWind) {
+              ctx.strokeStyle = `rgba(245, 158, 11, ${segAlpha})`; // amber-500
+            } else if (isModerate) {
+              ctx.strokeStyle = `rgba(14, 165, 233, ${segAlpha})`; // sky-500
+            } else {
+              ctx.strokeStyle = `rgba(56, 189, 248, ${segAlpha * 0.9})`; // sky-400
+            }
+
             ctx.lineWidth = 1.2 + (t / trailLen) * 0.8;
             ctx.lineCap = 'round';
             ctx.stroke();
           }
 
-          // Draw head particle glowing dot
+          // Glowing head dot
           const head = p.trail[trailLen - 1];
           ctx.beginPath();
           ctx.arc(head.x, head.y, 1.6, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(56, 189, 248, ${overallAlpha})`;
+          ctx.fillStyle = isHighWind
+            ? `rgba(251, 191, 36, ${overallAlpha})`
+            : `rgba(224, 242, 254, ${overallAlpha})`;
           ctx.fill();
         }
       }
@@ -288,7 +402,6 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       animFrameRef.current = requestAnimationFrame(render);
     };
 
-    // Map events handling: reset trails on pan/zoom so trails don't stretch
     const onMapTransform = () => {
       particles.forEach(p => {
         p.trail = [];
@@ -313,7 +426,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       }
       canvasRef.current = null;
     };
-  }, [map, visible, points]);
+  }, [map, visible, points, liveVectors]);
 
   return null;
 };

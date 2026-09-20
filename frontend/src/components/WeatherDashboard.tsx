@@ -282,7 +282,7 @@ export const WeatherDashboard: React.FC = () => {
       {/* 3D Map Overlay & Trends */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* India 3D Map */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
+        <div className="lg:col-span-2 glass-card p-3 sm:p-4 rounded-2xl h-[420px] sm:h-[480px] lg:h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3 px-2">
             <h3 className="text-sm font-heading font-bold text-slate-900">
               FourCastNet AI Spatial Forecast Map

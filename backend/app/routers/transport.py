@@ -20,12 +20,14 @@ async def get_transport_overview(
 
 @router.get("/wind-vectors")
 async def get_wind_vectors(
-    date: date = Query(...),
+    date: Optional[date] = Query(None),
     level: str = Query("850hpa", enum=["surface", "850hpa"]),
     bounds: Optional[str] = Query(None, description="lat_min,lon_min,lat_max,lon_max"),
 ):
-    """Get wind vector field data for map visualization."""
-    return await transport_service.get_wind_vectors(date=date, level=level, bounds=bounds)
+    """Get real-time or historical wind vector field data for map visualization."""
+    from datetime import date as dt_date
+    target_date = date or dt_date.today()
+    return await transport_service.get_wind_vectors(date=target_date, level=level, bounds=bounds)
 
 
 @router.get("/pathways")
