@@ -20,7 +20,7 @@ const getNormalizedApiUrl = (): string => {
   // If raw is empty or just "/", fallback to /api
   if (!raw || raw === '/') return '/api';
 
-  // If user provided root host (e.g. "https://aero-vision.onrender.com"), automatically append "/api"
+  // If user provided root host, automatically append "/api"
   if (!raw.endsWith('/api')) {
     return `${raw}/api`;
   }
@@ -31,7 +31,7 @@ const API_BASE_URL = getNormalizedApiUrl();
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 65000,
   headers: {
     'Content-Type': 'application/json',
   },

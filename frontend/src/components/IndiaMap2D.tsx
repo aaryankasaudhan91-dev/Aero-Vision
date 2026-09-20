@@ -367,10 +367,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         className="w-full h-full z-0"
         attributionControl={false}
       >
-        {/* Base Map Tiles with clean CartoDB Voyager style */}
+        {/* High-fidelity basemap tiles - 100% free, no API key required, zero watermarks */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
           maxZoom={19}
         />
 

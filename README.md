@@ -18,8 +18,7 @@
 </p>
 
 <p align="center">
-  <strong>🚀 Live Web Application:</strong> <a href="https://aero-vision-chi.vercel.app/">https://aero-vision-chi.vercel.app/</a><br/>
-  <strong>⚡ Production API Endpoint:</strong> <a href="https://aero-vision.onrender.com/api/health">https://aero-vision.onrender.com/api</a>
+  <strong>🚀 Live Web Application:</strong> <a href="https://aero-vision-chi.vercel.app/">https://aero-vision-chi.vercel.app/</a>
 </p>
 
 <p align="center">
@@ -52,14 +51,10 @@
 
 ---
 
-## 🚀 Live Production Links
+## 🚀 Live Web Application
 
-| Service | Host | URL |
-|---|---|---|
-| 🌐 **Frontend Application** | Vercel Edge CDN | [https://aero-vision-chi.vercel.app/](https://aero-vision-chi.vercel.app/) |
-| ⚡ **Backend REST API** | Render Cloud | [https://aero-vision.onrender.com](https://aero-vision.onrender.com) |
-| 📚 **Interactive Swagger API Docs** | Render Cloud | [https://aero-vision.onrender.com/docs](https://aero-vision.onrender.com/docs) |
-| 🗄️ **Geospatial Database** | Supabase Cloud (PostGIS) | AWS ap-south-1 (Mumbai) |
+The platform is deployed and accessible globally at:
+**[https://aero-vision-chi.vercel.app/](https://aero-vision-chi.vercel.app/)**
 
 ---
 
