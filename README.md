@@ -9,16 +9,21 @@
 </h4>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/Version-1.2.0-7c3aed?style=flat-square"/>
+  <img alt="Version" src="https://img.shields.io/badge/Version-1.2.1-7c3aed?style=flat-square"/>
   <img alt="FastAPI" src="https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi"/>
   <img alt="React" src="https://img.shields.io/badge/Frontend-React%2019-61dafb?style=flat-square&logo=react"/>
-  <img alt="TailwindCSS" src="https://img.shields.io/badge/Styling-Tailwind%20v4-06b6d4?style=flat-square&logo=tailwindcss"/>
-  <img alt="Supabase" src="https://img.shields.io/badge/Database-Supabase-3ecf8e?style=flat-square&logo=supabase"/>
+  <img alt="Three.js" src="https://img.shields.io/badge/3D%20WebGL-Three.js-black?style=flat-square&logo=three.js"/>
+  <img alt="Supabase" src="https://img.shields.io/badge/Database-Supabase%20%2B%20SQLite%20Fallback-3ecf8e?style=flat-square&logo=supabase"/>
   <img alt="Status" src="https://img.shields.io/badge/Status-Live%20Production-10b981?style=flat-square"/>
 </p>
 
 <p align="center">
-  AeroVision is a full-stack, real-time geospatial intelligence platform for atmospheric monitoring, air quality analysis, and public health risk assessment across the Indian subcontinent. It fuses satellite telemetry (NASA FIRMS, ESA TROPOMI/Sentinel-5P), CPCB ground sensor networks, and AI/ML models into a single premium command-center interface.
+  <strong>Lead Developer / Student Researcher:</strong> Aaryan Kasaudhan (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>)<br/>
+  <em>Academic Student Research Project · Non-Commercial Open Science Demonstration</em>
+</p>
+
+<p align="center">
+  AeroVision is a full-stack, real-time geospatial intelligence platform for atmospheric monitoring, air quality analysis, and public health risk assessment across the Indian subcontinent. It fuses satellite telemetry (NASA FIRMS, ESA TROPOMI/Sentinel-5P NRTI), CPCB ground sensor networks, and AI/ML spatial models into a high-performance command-center interface.
 </p>
 
 ---
@@ -27,16 +32,18 @@
 
 | Module | Description |
 |---|---|
-| 🌍 **AQI Overview** | National air quality index coverage from 29 real CPCB ground stations with spatial interpolation maps |
-| 📊 **Pollutant Maps** | Per-pollutant concentration charts for PM2.5, PM10, NO2, SO2, CO, O3 against CPCB NAQI safety limits |
-| 🏥 **Health Impact System** | Real-time public health exposure risk scoring (0–100) combining AQI, active fires, and HCHO column density |
-| 🔥 **HCHO Hotspots** | TROPOMI satellite HCHO column density anomaly detection using DBSCAN, Getis-Ord Gi* and Moran's I algorithms |
+| 🌍 **AQI Overview** | National air quality coverage from 29 CPCB ground stations with spatial IDW interpolation and continuous wind streamlines |
+| 📊 **Pollutant Maps** | Per-pollutant concentration charts for PM2.5, PM10, NO2, SO2, CO, O3 evaluated against CPCB NAQI safety standards |
+| 🏥 **Health Impact System** | Real-time public health exposure risk scoring (0–100) combining ground AQI, active fires, and satellite HCHO density |
+| 🔥 **HCHO Hotspots & Real-Time Stream** | TROPOMI satellite HCHO column density anomaly detection (DBSCAN, Getis-Ord Gi*, Moran's I) with **live telemetry polling (`/api/hcho/live`)** and ranked active clusters |
+| 🌐 **Interactive 2D/3D Mapping** | Dual-engine mapping: Leaflet 2D with IDW raster overlay + Three.js 3D WebGL with India vector boundary masking, continuous animated atmospheric wind streamlines, smooth camera lerp, and full-screen portal |
 | 🛰️ **Fire Correlation** | NASA FIRMS active fire radiative power (FRP) data with HCHO emission correlation and Pearson coefficient analysis |
-| 💨 **Transport Analysis** | Wind vector field visualization, Lagrangian back-trajectory analysis, and inter-regional pollutant source attribution |
-| 🌦️ **Weather Dynamics** | 7-day FourCastNet AI weather forecasts with boundary layer height, temperature, wind and humidity grid layers |
-| 🧠 **AI Insights** | Google Gemini-powered automated scientific anomaly detection, executive summaries, and domain-specific alerts |
-| 📝 **Research Reports** | Peer-quality PDF scientific reports with watermark, auto-generated sections, and instant download |
-| 🔄 **Real-Time Sync** | 15-second auto-refresh engine with live API latency tracking and "Last Sync" elapsed counter in the header |
+| 💨 **Transport Analysis** | ERA5 wind vector field visualization, Lagrangian back-trajectory analysis, and inter-regional pollutant source attribution |
+| 🌦️ **Weather Dynamics** | 7-day FourCastNet AI weather forecasts with boundary layer height, temperature, wind, and humidity layers |
+| 🧠 **AI Insights** | Google Gemini-powered automated scientific anomaly detection, executive summaries, and domain-specific advisories |
+| 📝 **Research Reports** | Peer-quality PDF scientific reports with auto-generated methodology, analysis charts, and instant export |
+| 🔄 **Real-Time Sync Engine** | Header telemetry indicator, 15-second dashboard refresh, and dedicated 5s/10s/30s live stream polling cadence |
+| 🛡️ **Resilient Hybrid Database** | Cloud Supabase (PostgreSQL + PostGIS) with seamless offline fallback to embedded SQLite (`aerovision.db`) |
 
 ---
 
@@ -98,15 +105,42 @@ aero-vision/
 
 ## 🗺️ Mapping Engine
 
-The `IndiaMap2D` component renders a full interactive Leaflet map locked to the Indian subcontinent (`maxBounds: [[5.0, 65.0], [38.5, 99.0]]`) using the CARTO Voyager light tile layer. It supports:
+AeroVision provides a dual-engine geospatial visualization stack:
 
-- **Smooth mode** — pure IDW-interpolated continuous raster overlay (50×50 canvas pixel grid)
-- **Hybrid mode** — overlay combined with station markers (default)
-- **Grid mode** — raw observation points only
-- **Wind arrows** — rotated SVG direction arrows sized by wind speed
-- **Tooltips** — station name, state, measured value, wind speed & direction
+### 2D Interactive GIS (`IndiaMap2D.tsx`)
+Locked to the Indian subcontinent (`maxBounds: [[5.0, 65.0], [38.5, 99.0]]`) using the CARTO Voyager light tile layer:
+- **Smooth Mode** — Continuous IDW (Inverse Distance Weighting) raster surface (50×50 pixel grid).
+- **Hybrid Mode (Default)** — Continuous interpolated surface combined with interactive station markers.
+- **Grid Mode** — Discrete observation points with NAQI-coded severity markers.
+- **Continuous Wind Streamlines** — High-performance HTML5 Canvas streamline overlay (`WindStreamlinesOverlay.tsx`) rendering real-time vector velocity fields across India.
+- **Station Tooltips & Cards** — Immediate telemetry readout on hover and click.
 
-The 3D globe (`IndiaMap3D`) is powered by Three.js with an orthographic projection and animated orbit controls.
+### 3D WebGL Atmospheric Canvas (`IndiaMap3D.tsx`)
+Built on Three.js, offering a state-of-the-art interactive spatial experience:
+- **Strict India Boundary Masking** — High-precision GeoJSON vector clipping focuses visual emphasis on sovereign borders, with surrounding subcontinental terrain rendered in subdued deep-slate relief.
+- **Stationary by Default with Continuous Wind Flow** — Default view is locked stationary for stable observation while 320 continuous fluid atmospheric wind streamline particles flow dynamically according to regional meteorological vectors.
+- **Smooth Camera Transitions (LERP)** — Smooth linear camera interpolation when focusing on specific stations or resetting perspectives.
+- **Glowing 3D Station Pins & Extrusions** — Interactive 3D cylinders and pulsing beacon rings extruded in the Z-axis proportionally to AQI severity.
+- **Edge-to-Edge Full-Screen Portal** — Modal portal allowing users to expand the 3D canvas to a distraction-free full-screen analytical environment.
+
+---
+
+## ⚡ Real-Time Streaming & Sync Engine
+
+AeroVision features dual-tier real-time data synchronization:
+
+1. **Live HCHO Telemetry Stream (`/api/hcho/live`)**:
+   - Direct streaming integration for Sentinel-5P / TROPOMI NRTI Level-3 data.
+   - **Real-Time Mode Toggle**: Switch between historic date analysis and continuous live telemetry.
+   - **Configurable Cadence**: 5s, 10s, or 30s polling intervals with an animated countdown clock and "Syncing..." status.
+   - **"⚡ Live Today" Preset**: Instant jump to the current UTC satellite pass.
+   - **Live Event Feed Ticker**: Real-time activity stream displaying newly detected column density anomalies and high-severity hotspot alerts.
+   - **Ranked Active Clusters Table**: Live table sorting detected anomalies by statistical significance ($Z$-score) and peak column density.
+
+2. **Global Application Sync**:
+   - **Axios Interceptor Timing**: Every API request records latency at dispatch, broadcasting round-trip ping times via custom `api-latency` DOM events.
+   - **Live Header Diagnostics**: Real-time server latency indicator (e.g., `14ms`) and elapsed "Last Sync" counter (`Just Now` → `5s ago` → `1m ago`).
+   - **Global Auto-Refresh**: Background 15-second refresh cycle for AQI, Weather, and Fire observation panels.
 
 ---
 
@@ -133,16 +167,6 @@ The dashboard surfaces:
 
 ---
 
-## ⚡ Real-Time Sync Engine
-
-All data panels refresh automatically without requiring a page reload:
-
-1. **Axios Interceptor Timing** — every API request records `Date.now()` at dispatch and calculates round-trip duration on response, broadcasting it via a custom `api-latency` DOM event.
-2. **Live Header Indicators** — the app header shows the actual measured `Server Latency` (e.g. `14ms`) and a "Last Sync" counter that ticks (`Just Now` → `5s ago` → `1m 3s ago`) and resets on every fresh data load.
-3. **Auto-Refresh Toggle** — a pill toggle in the header dispatches a `refresh-active-dashboard` event every **15 seconds** to all mounted dashboard components, which silently re-fetch their data in the background.
-
----
-
 ## 🔧 Tech Stack
 
 ### Backend
@@ -150,11 +174,11 @@ All data panels refresh automatically without requiring a page reload:
 |---|---|
 | API Framework | FastAPI 0.115 + Uvicorn |
 | Language | Python 3.11+ |
-| Database | Supabase (PostgreSQL + PostGIS) |
-| Geospatial | GeoPandas, Rasterio, Shapely, pyproj, GEE |
+| Database | Supabase (PostgreSQL + PostGIS) with SQLite Local Fallback |
+| Geospatial | GeoPandas, Rasterio, Shapely, pyproj, Google Earth Engine |
 | ML/AI | scikit-learn, XGBoost, TensorFlow, PyTorch |
-| Data Ingestion | NASA FIRMS, CDS/ERA5, TROPOMI/Sentinel-5P |
-| Spatial Stats | PySAL (libpysal, esda — DBSCAN, Getis-Ord, Moran's I) |
+| Data Ingestion | NASA FIRMS, CDS/ERA5, Sentinel-5P NRTI TROPOMI |
+| Spatial Stats | PySAL (libpysal, esda — DBSCAN, Getis-Ord Gi*, Moran's I) |
 | PDF | ReportLab |
 | Logging | Loguru |
 
@@ -164,7 +188,7 @@ All data panels refresh automatically without requiring a page reload:
 | Framework | React 19 + TypeScript |
 | Build Tool | Vite 8 |
 | Styling | Tailwind CSS v4 |
-| Maps | Leaflet + react-leaflet (2D), Three.js (3D) |
+| Maps | Leaflet + react-leaflet (2D GIS), Three.js (3D WebGL Canvas) |
 | Charts | Recharts (Area, Line, Bar, Radar) |
 | HTTP Client | Axios with interceptor-level latency tracking |
 | Design System | Atmospheric Intelligence (Stitch — glassmorphic dark theme) |
@@ -176,14 +200,14 @@ All data panels refresh automatically without requiring a page reload:
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- A Supabase project (URL + anon key)
-- Google Earth Engine service account credentials
+- A Supabase project (URL + anon key) or offline local SQLite fallback
+- Google Earth Engine service account credentials (optional for live GEE fetch)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/aero-vision.git
-cd aero-vision
+git clone https://github.com/aaryankasaudhan91-dev/Aero-Vision.git
+cd Aero-Vision
 ```
 
 ### 2. Backend Setup
@@ -249,7 +273,8 @@ npm run build
 | `GET` | `/api/aqi/observations` | Raw ground sensor observations |
 | `GET` | `/api/aqi/trends` | AQI time-series for charts |
 | `GET` | `/api/hcho/` | HCHO hotspot overview |
-| `GET` | `/api/hcho/hotspots` | Spatial anomaly cluster data |
+| `GET` | `/api/hcho/live` | **Real-time Sentinel-5P NRTI streaming telemetry & active clusters** |
+| `GET` | `/api/hcho/hotspots` | Spatial anomaly cluster data (DBSCAN, Getis-Ord, Moran's I) |
 | `GET` | `/api/hcho/trends` | HCHO column density trends |
 | `GET` | `/api/fire/` | Active fire overview |
 | `GET` | `/api/fire/records` | NASA FIRMS fire detections |
@@ -264,14 +289,24 @@ npm run build
 
 ---
 
-## 🗄️ Database Schema (Supabase)
+## 🗄️ Resilient Hybrid Database Architecture
+
+AeroVision incorporates a fail-safe data persistence layer:
+
+1. **Cloud Production Layer (Supabase PostgreSQL + PostGIS)**:
+   - Full spatial indexing (`geometry(Point, 4326)`).
+   - Real-time row subscriptions and centralized cloud persistence.
+2. **Local Engine Fallback (`aerovision.db`)**:
+   - High-performance embedded SQLite database managed by `LocalQueryExecutor`.
+   - **Auto-Schema Evolution**: Dynamically adds missing statistical columns (`centroid_lat`, `centroid_lon`, `max_hcho`, `z_score`, `p_value`) at runtime.
+   - Ensures continuous offline execution and uninterrupted academic demonstrations during network drops.
 
 | Table | Description |
 |---|---|
 | `cpcb_stations` | 29 real CPCB monitoring nodes with lat/lon, city, state |
 | `aqi_observations` | Daily/hourly AQI readings per station |
-| `tropomi_products` | 1000 TROPOMI HCHO column measurements |
-| `fire_records` | 45 NASA FIRMS active fire detections (geocoded to Indian states) |
+| `tropomi_products` | Sentinel-5P TROPOMI HCHO column measurements |
+| `fire_records` | NASA FIRMS active fire detections (geocoded to Indian states) |
 | `weather_forecasts` | FourCastNet model output grid |
 | `ai_insights` | Gemini-generated alert records |
 | `reports` | Generated report metadata & PDF storage |
@@ -321,18 +356,20 @@ The UI is built on the **Atmospheric Intelligence** design system generated via 
 |---|---|---|
 | CPCB India | Ground AQI observations (PM2.5, PM10, NO2, SO2, CO, O3) | Hourly |
 | NASA FIRMS | Active fire radiative power (MODIS/VIIRS) | Near real-time |
-| ESA Sentinel-5P / TROPOMI | HCHO column density (L2 product) | Daily |
+| ESA Sentinel-5P / TROPOMI | HCHO column density (NRTI & Offline L2/L3 products) | Real-time stream / Daily |
 | ECMWF ERA5 | Wind fields, boundary layer height | 6-hourly |
 | NVIDIA FourCastNet | 7-day AI weather forecast grids | On-demand |
 
 ---
 
-## 📄 License
+## 📄 License & Academic Attribution
 
-This project is developed for the **Indian Space Research Organisation (ISRO SAC)** atmospheric science research program. All rights reserved. Refer to project documentation for data usage and redistribution policies.
+This project is an **Academic Student Research Project** led by **Aaryan Kasaudhan** (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>) for educational, scientific, and non-commercial public interest research.
+
+Atmospheric datasets are sourced from open satellite and public observation networks (ESA Copernicus Sentinel-5P, NASA FIRMS, CPCB India, and ECMWF). All rights to underlying satellite data belong to their respective agencies.
 
 ---
 
 <p align="center">
-  Built with ❤️ for India's atmospheric intelligence mission · AeroVision V1.2.0-Production
+  Built with ❤️ by Aaryan Kasaudhan for India's atmospheric intelligence mission · AeroVision V1.2.1
 </p>
