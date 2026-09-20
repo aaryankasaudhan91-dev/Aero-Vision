@@ -6,7 +6,7 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.API_BASE_URL;
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -118,7 +118,7 @@ export const fireApi = {
 export const transportApi = {
   getOverview: (params?: { date?: string; source_region?: string }) =>
     apiClient.get('/transport/', { params }),
-  getWindVectors: (params: { date: string; level?: string; bounds?: string }) =>
+  getWindVectors: (params?: { date?: string; level?: string; bounds?: string }) =>
     apiClient.get('/transport/wind-vectors', { params }),
   getPathways: (params: { start_date: string; end_date: string; source_region?: string }) =>
     apiClient.get('/transport/pathways', { params }),
