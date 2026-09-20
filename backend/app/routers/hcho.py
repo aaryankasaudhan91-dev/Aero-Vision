@@ -55,6 +55,12 @@ async def get_hotspots(
     )
 
 
+@router.get("/live")
+async def get_live_hcho_feed(state: Optional[str] = Query(None)):
+    """Get live real-time Sentinel-5P TROPOMI satellite telemetry feed."""
+    return await hcho_service.get_live_feed(state=state)
+
+
 @router.get("/hotspots/regions")
 async def get_hotspot_regions():
     """Get summary of all identified hotspot regions (IGP, Punjab, etc.)."""

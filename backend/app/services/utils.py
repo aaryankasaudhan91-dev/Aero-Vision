@@ -31,12 +31,29 @@ def fetch_cpcb_observations(target_date: date):
         logger.error(f"Error fetching real cpcb_observations: {e}")
 
 def fetch_tropomi_products(target_date: date):
-    """Fetch real Sentinel-5P TROPOMI data (Requires GEE or Copernicus)."""
-    logger.info(f"Skipping mock TROPOMI generation for {target_date}. Real data must be ingested via scheduled pipeline.")
+    """Fetch real Sentinel-5P TROPOMI data via GEE."""
+    try:
+        from app.pipelines.data_ingestion import TROPOMIIngestion
+        import asyncio
+        ing = TROPOMIIngestion()
+        start_str = str(target_date)
+        end_str = str(target_date + timedelta(days=1))
+        logger.info(f"Ingesting real Sentinel-5P TROPOMI HCHO data from GEE for {start_str} to {end_str}...")
+        asyncio.run(ing.ingest_from_gee("HCHO", start_str, end_str))
+    except Exception as e:
+        logger.error(f"Error fetching real TROPOMI data for {target_date}: {e}")
 
 def fetch_hcho_hotspots(target_date: date):
-    """Fetch real HCHO hotspots."""
-    logger.info(f"Skipping mock HCHO hotspots generation for {target_date}.")
+    """Compute real HCHO hotspots using ML detection."""
+    try:
+        from app.ml.hcho_hotspot import HCHOHotspotDetector
+        import asyncio
+        detector = HCHOHotspotDetector()
+        date_str = str(target_date)
+        logger.info(f"Detecting real HCHO hotspots via ML models for {date_str}...")
+        asyncio.run(detector.detect_hotspots(date_str, date_str))
+    except Exception as e:
+        logger.error(f"Error running real HCHO hotspot detection for {target_date}: {e}")
 
 def fetch_fire_records(target_date: date):
     """Fetch real active fire detection records from NASA FIRMS."""

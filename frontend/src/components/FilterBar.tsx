@@ -107,9 +107,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Date Filter */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
-            Observation Date
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+              Observation Date
+            </label>
+            <button
+              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+              className="text-[9px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-wider flex items-center gap-0.5 cursor-pointer"
+              title="Set to today's real-time feed"
+            >
+              <span>⚡</span> Live Today
+            </button>
+          </div>
           <input
             type="date"
             value={selectedDate}

@@ -94,6 +94,10 @@ class HCHOHotspotDetector:
                 h["season"] = season
                 h["region_name"] = self._identify_region(h.get("centroid_lat"), h.get("centroid_lon"))
                 h["state"] = self._identify_state(h.get("centroid_lat"), h.get("centroid_lon"), stations_list)
+                if "centroid_lat" in h and "latitude" not in h:
+                    h["latitude"] = h["centroid_lat"]
+                if "centroid_lon" in h and "longitude" not in h:
+                    h["longitude"] = h["centroid_lon"]
 
             if hotspots:
                 batch = hotspots[:200]  # Limit batch size

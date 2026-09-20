@@ -94,6 +94,8 @@ export const hchoApi = {
     apiClient.get('/hcho/trends', { params }),
   getClimatology: (params?: { state?: string }) =>
     apiClient.get('/hcho/climatology', { params }),
+  getLiveFeed: (params?: { state?: string }) =>
+    apiClient.get('/hcho/live', { params }),
 };
 
 // ── Fire API ──
