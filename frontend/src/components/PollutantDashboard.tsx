@@ -66,8 +66,9 @@ export const PollutantDashboard: React.FC = () => {
         state: selectedState,
         is_active: true,
       });
+      const rawStations = Array.isArray(stationsRes?.data) ? stationsRes.data : [];
       const uniqueCities = Array.from(
-        new Set((stationsRes.data || []).map((s: any) => s.city).filter(Boolean))
+        new Set(rawStations.map((s: any) => s.city).filter(Boolean))
       ) as string[];
       setCitiesList(uniqueCities);
 

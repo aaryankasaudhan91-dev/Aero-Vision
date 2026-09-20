@@ -6,7 +6,11 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL = import.meta.env.API_BASE_URL;
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.API_BASE_URL ||
+  (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api');
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -28,6 +32,17 @@ apiClient.interceptors.request.use(
 // Response interceptor with retry logic
 apiClient.interceptors.response.use(
   (response) => {
+    // If the server returns HTML (e.g. Vercel SPA index.html fallback for unmatched API route), reject cleanly
+    if (
+      typeof response.data === 'string' &&
+      response.data.trim().toLowerCase().startsWith('<!doctype')
+    ) {
+      const err = new Error(
+        `API endpoint "${response.config.url}" returned an HTML document instead of JSON. Ensure VITE_API_BASE_URL points to the active backend API service.`
+      );
+      return Promise.reject(err);
+    }
+
     const startTime = (response.config as any).metadata?.startTime;
     if (startTime) {
       const duration = Date.now() - startTime;

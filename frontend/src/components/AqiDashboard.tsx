@@ -56,7 +56,7 @@ export const AqiDashboard: React.FC = () => {
         city: selectedCity,
       });
 
-      if (overviewRes.data) {
+      if (overviewRes?.data && typeof overviewRes.data === 'object') {
         setMetrics({
           avg_aqi: overviewRes.data.avg_aqi || 0,
           max_aqi: overviewRes.data.max_aqi || 0,
@@ -65,7 +65,10 @@ export const AqiDashboard: React.FC = () => {
         });
 
         // Map real observations to flat station structure for Map and Cards
-        const mappedStations = (overviewRes.data.observations || []).map((o: any) => ({
+        const obsList = Array.isArray(overviewRes.data.observations)
+          ? overviewRes.data.observations
+          : [];
+        const mappedStations = obsList.map((o: any) => ({
           station_id: o.station_id,
           station_name: o.cpcb_stations?.station_name || 'Unknown',
           city: o.cpcb_stations?.city || '',
@@ -82,8 +85,9 @@ export const AqiDashboard: React.FC = () => {
         state: selectedState,
         is_active: true,
       });
+      const rawStations = Array.isArray(stationsRes?.data) ? stationsRes.data : [];
       const uniqueCities = Array.from(
-        new Set((stationsRes.data || []).map((s: any) => s.city).filter(Boolean))
+        new Set(rawStations.map((s: any) => s.city).filter(Boolean))
       ) as string[];
       setCitiesList(uniqueCities);
 
@@ -96,7 +100,7 @@ export const AqiDashboard: React.FC = () => {
         state: selectedState,
         city: selectedCity,
       });
-      setTrends(trendsRes.data || []);
+      setTrends(Array.isArray(trendsRes?.data) ? trendsRes.data : []);
 
       // 4. Trigger Real Predictions
       await aqiApi.getPredictions({
