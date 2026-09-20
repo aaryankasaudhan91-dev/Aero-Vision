@@ -1,56 +1,54 @@
 # FastAPI & Server
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-python-multipart==0.0.19
-python-dotenv==1.0.1
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
 
 # Database
-supabase==2.13.0
-asyncpg==0.30.0
-sqlalchemy[asyncio]==2.0.36
-geoalchemy2==0.15.2
+supabase>=2.10.0
+asyncpg>=0.29.0
+sqlalchemy[asyncio]>=2.0.0
+geoalchemy2>=0.14.0
 
 # Geospatial & Weather Data
-earthengine-api==1.4.2
-rasterio==1.4.3
-geopandas==1.0.1
-xarray==2024.11.0
-netCDF4==1.7.2
-shapely==2.0.6
-pyproj==3.7.0
+earthengine-api>=1.4.0
+rasterio>=1.3.0
+geopandas>=0.14.0
+xarray>=2024.1.0
+netCDF4>=1.6.5
+shapely>=2.0.0
+pyproj>=3.6.0
 
 # Machine Learning & Spatial Stats
-scikit-learn==1.6.0
-xgboost==2.1.3
-numpy==2.1.3
-pandas==2.2.3
-scipy==1.14.1
-libpysal==4.12.1
-esda==2.6.0
-pointpats==2.5.0
-
-# Deep Learning (CPU inference)
-tensorflow-cpu==2.18.0
+scikit-learn>=1.5.0
+xgboost>=2.0.0
+numpy>=1.26.0
+pandas>=2.1.0
+scipy>=1.13.0
+libpysal>=4.10.0
+esda>=2.5.0
+pointpats>=2.4.0
 
 # Data Ingestion & APIs
-requests==2.32.3
-aiohttp==3.11.10
-cdsapi==0.7.5
-beautifulsoup4==4.12.3
+requests>=2.31.0
+aiohttp>=3.9.0
+cdsapi>=0.7.0
+beautifulsoup4>=4.12.0
 
 # Visualization & PDF
-reportlab==4.2.5
-markdown==3.7
-matplotlib==3.9.3
+reportlab>=4.0.0
+markdown>=3.6
+matplotlib>=3.8.0
 
 # Utilities & Networking
-pydantic==2.10.3
-pydantic-settings==2.7.0
-httpx==0.28.1
-orjson==3.10.12
-joblib==1.4.2
-tqdm==4.67.1
-loguru==0.7.3
-google-genai==1.75.0
-dnspython>=2.6.1
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+httpx>=0.27.0
+orjson>=3.10.0
+joblib>=1.4.0
+tqdm>=4.66.0
+loguru>=0.7.0
+google-genai>=1.0.0
+dnspython>=2.6.0
+
 
