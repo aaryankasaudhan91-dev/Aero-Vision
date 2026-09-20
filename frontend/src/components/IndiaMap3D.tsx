@@ -16,7 +16,7 @@ interface MapPoint {
 
 interface IndiaMap3DProps {
   points: MapPoint[];
-  dataType: 'aqi' | 'hcho' | 'fire' | 'pollutant';
+  dataType?: 'aqi' | 'hcho' | 'fire' | 'pollutant' | 'weather';
   pollutantName?: string;
   variableName?: string;
   unit?: string;

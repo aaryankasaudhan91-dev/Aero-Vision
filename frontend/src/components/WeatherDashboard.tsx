@@ -294,7 +294,7 @@ export const WeatherDashboard: React.FC = () => {
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
               points={mapPoints}
-              dataType="pollutant"
+              dataType="weather"
               variableName={activeVar.name}
               unit={activeVar.unit}
             />

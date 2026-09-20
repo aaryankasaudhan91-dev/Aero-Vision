@@ -16,7 +16,7 @@ interface MapPoint {
 
 interface IndiaMapProps {
   points: MapPoint[];
-  dataType: 'aqi' | 'hcho' | 'fire' | 'pollutant';
+  dataType?: 'aqi' | 'hcho' | 'fire' | 'pollutant' | 'weather';
   pollutantName?: string;
   variableName?: string;
   unit?: string;
@@ -37,6 +37,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
     dataType === 'aqi' ? 'AQI' :
     dataType === 'hcho' ? 'HCHO Column' :
     dataType === 'fire' ? 'Fire Intensity (FRP)' :
+    dataType === 'weather' ? 'Weather Dynamics' :
     pollutantName || 'Pollutant Value'
   );
   

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, ImageOverlay, Marker, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import WindStreamlinesOverlay from './WindStreamlinesOverlay';
-import { INDIA_GEOJSON, INDIA_CENTER, REGIONAL_MAP_BOUNDS, clipCanvasToIndia } from '../utils/indiaMask';
+import { INDIA_GEOJSON, INDIA_CENTER, REGIONAL_MAP_BOUNDS, clipCanvasToIndia, isPointInIndia } from '../utils/indiaMask';
 
 interface MapPoint {
   latitude: number;
@@ -17,13 +17,16 @@ interface MapPoint {
 
 interface IndiaMap2DProps {
   points: MapPoint[];
-  dataType?: 'aqi' | 'hcho' | 'fire' | 'pollutant';
+  dataType?: 'aqi' | 'hcho' | 'fire' | 'pollutant' | 'weather';
   variableName: string;
   unit: string;
 }
 
 export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variableName, unit }) => {
-  const [displayMode, setDisplayMode] = useState<'smooth' | 'hybrid' | 'grid'>('hybrid');
+  const isWeatherMode = dataType === 'weather' || variableName.toLowerCase().includes('temp') || variableName.toLowerCase().includes('forecast');
+  const [displayMode, setDisplayMode] = useState<'smooth' | 'hybrid' | 'grid'>(
+    isWeatherMode ? 'smooth' : 'hybrid'
+  );
   const [showWind, setShowWind] = useState(true);
 
   // Auto-enable wind display when looking at wind speed variables
@@ -32,6 +35,11 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       setShowWind(true);
     }
   }, [variableName]);
+
+  // Filter point markers strictly to India territory (prevents markers over Pakistan, Nepal, Bangladesh, China, or oceans)
+  const indianPoints = useMemo(() => {
+    return points.filter(pt => isPointInIndia(pt.longitude, pt.latitude));
+  }, [points]);
 
   // Determine grid bounds based on dataset type:
   // Weather grid: [[5.25, 67.25], [38.25, 98.75]]
@@ -48,6 +56,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
   const getPointColor = (pt: MapPoint) => {
     if (pt.color) return pt.color;
     const val = pt.value;
+    const varName = (variableName || '').toLowerCase();
+
     if (dataType === 'aqi') {
       if (val > 300) return '#a855f7'; // Purple (Severe)
       if (val > 200) return '#ef4444'; // Red (Very Poor)
@@ -56,10 +66,35 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       return '#10b981';                // Emerald (Good)
     }
     if (dataType === 'hcho') {
-      return val > 1.5 ? '#ec4899' : '#6366f1'; // threshold scaled by 1e5
+      return val > 1.5 ? '#ec4899' : '#6366f1';
     }
     if (dataType === 'fire') {
       return val > 150 ? '#f43f5e' : '#f97316';
+    }
+    if (dataType === 'weather' || varName.includes('temp') || varName.includes('wind') || varName.includes('humid') || varName.includes('bound') || varName.includes('pbl')) {
+      if (varName.includes('temp')) {
+        if (val < 15) return '#3b82f6';
+        if (val < 25) return '#60a5fa';
+        if (val < 30) return '#fbbf24';
+        if (val < 35) return '#f97316';
+        return '#ef4444';
+      }
+      if (varName.includes('wind')) {
+        if (val < 3) return '#22d3ee';
+        if (val < 6) return '#06b6d4';
+        if (val < 9) return '#0d9488';
+        return '#2563eb';
+      }
+      if (varName.includes('humid')) {
+        if (val < 40) return '#a3e635';
+        if (val < 70) return '#14b8a6';
+        return '#0284c7';
+      }
+      if (varName.includes('bound') || varName.includes('pbl')) {
+        if (val < 800) return '#c084fc';
+        if (val < 1500) return '#8b5cf6';
+        return '#4f46e5';
+      }
     }
     // Default/Pollutant:
     if (val > 75) return '#ef4444';
@@ -68,6 +103,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
 
   // Helper to determine color corresponding to an interpolated value
   const getValueColor = (val: number, type?: string, pts?: MapPoint[]) => {
+    const varName = (variableName || '').toLowerCase();
     if (type === 'aqi') {
       if (val > 300) return '#a855f7';
       if (val > 200) return '#ef4444';
@@ -80,6 +116,31 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
     }
     if (type === 'fire') {
       return val > 150 ? '#f43f5e' : '#f97316';
+    }
+    if (type === 'weather' || varName.includes('temp') || varName.includes('wind') || varName.includes('humid') || varName.includes('bound') || varName.includes('pbl')) {
+      if (varName.includes('temp')) {
+        if (val < 15) return '#3b82f6';
+        if (val < 25) return '#60a5fa';
+        if (val < 30) return '#fbbf24';
+        if (val < 35) return '#f97316';
+        return '#ef4444';
+      }
+      if (varName.includes('wind')) {
+        if (val < 3) return '#22d3ee';
+        if (val < 6) return '#06b6d4';
+        if (val < 9) return '#0d9488';
+        return '#2563eb';
+      }
+      if (varName.includes('humid')) {
+        if (val < 40) return '#a3e635';
+        if (val < 70) return '#14b8a6';
+        return '#0284c7';
+      }
+      if (varName.includes('bound') || varName.includes('pbl')) {
+        if (val < 800) return '#c084fc';
+        if (val < 1500) return '#8b5cf6';
+        return '#4f46e5';
+      }
     }
     if (type === 'pollutant') {
       if (val > 75) return '#ef4444';
@@ -110,7 +171,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
   // Create a custom Leaflet DivIcon for wind vectors (rotated SVG arrow)
   const createWindIcon = (direction: number, speed: number, color?: string) => {
     const rotation = (direction + 180) % 360; 
-    const size = Math.max(10, Math.min(22, 10 + speed * 1.2));
+    const size = Math.max(10, Math.min(20, 10 + speed * 1.1));
     const arrowColor = color || '#0284c7'; 
 
     return L.divIcon({
@@ -121,9 +182,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 24px;
-          height: 24px;
-          opacity: 0.7;
+          width: 22px;
+          height: 22px;
+          opacity: 0.8;
           transition: all 0.2s ease;
         ">
           <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -131,8 +192,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           </svg>
         </div>
       `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12]
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
     });
   };
 
@@ -143,8 +204,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
     // 1. DENSE GRID PATTERN (e.g. weather forecast model grid)
     if (points.length > 200) {
       const canvas = document.createElement('canvas');
-      const width = 21;  // 21 steps for longitude
-      const height = 22; // 22 steps for latitude
+      const width = 21;
+      const height = 22;
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -195,16 +256,15 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         }
       }
       ctx.putImageData(imgData, 0, 0);
-      // Vector-clip strictly to India's land boundary so surrounding countries are completely untouched
       const clippedCanvas = clipCanvasToIndia(canvas, 5.25, 38.25, 67.25, 98.75);
       return clippedCanvas.toDataURL();
     }
 
-    // 2. SPARSE POINT PATTERN (e.g. AQI stations, fire hotspots, trajectories)
+    // 2. SPARSE POINT PATTERN (e.g. AQI stations, weather forecast, fire hotspots)
     // Run Inverse Distance Weighting (IDW) to interpolate a continuous smooth field
     const canvas = document.createElement('canvas');
-    const width = 60;  // 60 x 60 is fast and stretches smoothly
-    const height = 60;
+    const width = 64;
+    const height = 64;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
@@ -231,11 +291,11 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           const pt = points[i];
           const d2 = (pt.latitude - lat) ** 2 + (pt.longitude - lon) ** 2;
           
-          if (d2 < 0.005) { // Very close to station
+          if (d2 < 0.005) {
             exactColor = getPointColor(pt);
             break;
           }
-          const weight = 1 / (d2 ** 1.15); // Power factor 1.15 creates smooth waves
+          const weight = 1 / (d2 ** 1.15);
           numerator += pt.value * weight;
           denominator += weight;
         }
@@ -261,10 +321,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
     }
 
     ctx.putImageData(imgData, 0, 0);
-    // Vector-clip strictly to India's land boundary so surrounding countries are completely untouched
     const clippedCanvas = clipCanvasToIndia(canvas, minLat, maxLat, minLon, maxLon);
     return clippedCanvas.toDataURL();
-  }, [points, dataType]);
+  }, [points, dataType, variableName]);
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 isolate z-0">
@@ -304,29 +363,30 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         zoom={4.8}
         minZoom={3.8}
         maxBounds={REGIONAL_MAP_BOUNDS}
-        maxBoundsViscosity={0.7}
-        scrollWheelZoom={true}
-        className="w-full h-full"
-        style={{ height: '100%', width: '100%', background: '#f8fafc' }}
+        maxBoundsViscosity={0.9}
+        className="w-full h-full z-0"
+        attributionControl={false}
       >
-        {/* Beautiful Light-Themed OpenStreetMap Layer (Displays India and all surrounding countries & water bodies) */}
+        {/* Base Map Tiles with clean CartoDB Voyager style */}
         <TileLayer
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={19}
         />
 
-        {/* Render the smooth continuous color overlay image - precisely clipped to India borders */}
-        {(displayMode === 'smooth' || displayMode === 'hybrid') && imageUrl && (
+        {/* Smooth Raster Layer clipped to India boundary */}
+        {imageUrl && displayMode !== 'grid' && (
           <ImageOverlay
             url={imageUrl}
             bounds={gridBounds}
-            opacity={0.52}
+            opacity={0.88}
+            zIndex={200}
           />
         )}
 
-        {/* Crisp Official India Cartographic Boundary Outline */}
+        {/* National Boundary Outline of India for precision cartography */}
         <GeoJSON
-          data={INDIA_GEOJSON}
+          data={INDIA_GEOJSON as any}
           interactive={false}
           style={{
             color: '#0284c7',
@@ -340,8 +400,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         {/* Real-Time Animated Wind Flow Streamlines Canvas Overlay (Clipped to India) */}
         <WindStreamlinesOverlay points={points} visible={showWind} />
 
-        {/* Render Wind Vector arrows */}
-        {showWind && hasWindData && points.map((pt, idx) => {
+        {/* Render Wind Vector arrows strictly within India in grid mode */}
+        {showWind && hasWindData && displayMode === 'grid' && indianPoints.map((pt, idx) => {
           if (idx % 2 !== 0 || pt.wind_direction === undefined || pt.wind_speed === undefined) {
             return null;
           }
@@ -355,13 +415,10 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           );
         })}
 
-        {/* Render grid cell point markers */}
-        {points.map((pt, idx) => {
+        {/* Render grid cell point markers ONLY in hybrid or grid mode, and strictly inside India */}
+        {displayMode !== 'smooth' && indianPoints.map((pt, idx) => {
           const color = getPointColor(pt);
-          const isSmoothOnly = displayMode === 'smooth';
-
-          // For fire incidents, make markers slightly larger and glowing
-          const markerRadius = dataType === 'fire' ? Math.max(4, Math.min(12, pt.value / 30)) : 6;
+          const markerRadius = dataType === 'fire' ? Math.max(4, Math.min(12, pt.value / 30)) : 5;
 
           return (
             <CircleMarker
@@ -372,7 +429,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
                 color: '#ffffff',
                 weight: 1.5,
                 fillColor: color,
-                fillOpacity: isSmoothOnly ? 0.05 : 0.9,
+                fillOpacity: 0.9,
               }}
             >
               <Tooltip direction="top" offset={[0, -5]} opacity={1}>
@@ -471,7 +528,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
             </>
           )}
           {/* Weather Variable Legend */}
-          {!dataType && variableName.toLowerCase().includes('temperature') && (
+          {(dataType === 'weather' || !dataType) && variableName.toLowerCase().includes('temperature') && (
             <>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-[#ef4444] inline-block"></span>
@@ -495,7 +552,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
               </div>
             </>
           )}
-          {!dataType && variableName.toLowerCase().includes('wind') && (
+          {(dataType === 'weather' || !dataType) && variableName.toLowerCase().includes('wind') && (
             <>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-[#2563eb] inline-block"></span>
@@ -515,7 +572,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
               </div>
             </>
           )}
-          {!dataType && variableName.toLowerCase().includes('humidity') && (
+          {(dataType === 'weather' || !dataType) && variableName.toLowerCase().includes('humidity') && (
             <>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-[#0284c7] inline-block"></span>
@@ -531,7 +588,7 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
               </div>
             </>
           )}
-          {!dataType && variableName.toLowerCase().includes('boundary') && (
+          {(dataType === 'weather' || !dataType) && (variableName.toLowerCase().includes('boundary') || variableName.toLowerCase().includes('pbl')) && (
             <>
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-[#4f46e5] inline-block"></span>
