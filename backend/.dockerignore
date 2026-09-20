@@ -1,0 +1,30 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# Large test & extraction data
+*.nc
+*.nc_extracted/
+*.h5
+*.tif
+*.tiff
+*.zip
+
+# Database scratch & temporary files
+*.db-journal
+*.log
+
+# Git & IDE
+.git/
+.gitignore
+.vscode/
+.idea/
