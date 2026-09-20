@@ -25,15 +25,34 @@ try:
     host = parsed.hostname
     if host and "placeholder" not in host:
         # Check if remote host resolves without blocking
-        socket.getaddrinfo(host, 443)
+        try:
+            socket.getaddrinfo(host, 443)
+        except Exception:
+            # Fallback to public DNS (Google 8.8.8.8 / Cloudflare 1.1.1.1)
+            try:
+                import dns.resolver
+                resolver = dns.resolver.Resolver()
+                resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+                answers = resolver.resolve(host, "A")
+                ip = answers[0].to_text()
+                orig_getaddrinfo = socket.getaddrinfo
+                def patched_getaddrinfo(h, port, family=0, type=0, proto=0, flags=0):
+                    if h == host:
+                        return orig_getaddrinfo(ip, port, family, type, proto, flags)
+                    return orig_getaddrinfo(h, port, family, type, proto, flags)
+                socket.getaddrinfo = patched_getaddrinfo
+                logger.info(f"Supabase DNS resolved via public DNS fallback ({ip}).")
+            except Exception as dns_err:
+                logger.debug(f"Public DNS fallback failed: {dns_err}")
+
         _raw_supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
         _supabase_available = True
         logger.info(f"Supabase cloud connected ({host}).")
     else:
         logger.info("Database Engine: Local resilient geospatial data engine active.")
-except Exception:
+except Exception as e:
     _supabase_available = False
-    logger.info("Database Engine: Local resilient geospatial data engine active (cloud standby).")
+    logger.info(f"Database Engine: Local resilient geospatial data engine active (cloud standby: {e}).")
 
 
 class ResilientTableProxy:
