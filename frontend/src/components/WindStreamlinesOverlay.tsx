@@ -131,7 +131,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
     };
 
     // 3. Initialize Particle Pool
-    const PARTICLE_COUNT = 240;
+    const PARTICLE_COUNT = 320;
     const particles: Particle[] = [];
 
     const spawnParticle = (p?: Particle): Particle => {
@@ -161,8 +161,8 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       const target = p || {
         lat,
         lon,
-        age: Math.floor(Math.random() * 50),
-        maxAge: 70 + Math.floor(Math.random() * 60),
+        age: Math.floor(Math.random() * 60),
+        maxAge: 85 + Math.floor(Math.random() * 70),
         speed: wind.speed,
         trail: []
       };
@@ -170,7 +170,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       target.lat = lat;
       target.lon = lon;
       target.age = 0;
-      target.maxAge = 70 + Math.floor(Math.random() * 60);
+      target.maxAge = 85 + Math.floor(Math.random() * 70);
       target.speed = wind.speed;
       target.trail = [];
       return target;
@@ -183,9 +183,9 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       particles.push(p);
     }
 
-    // 4. Animation loop
-    const MAX_TRAIL_LENGTH = 10;
-    const SPEED_SCALE = 0.0035; // Lat/lon step multiplier per m/s
+    // 4. Animation loop with continuous flowing trails
+    const MAX_TRAIL_LENGTH = 16;
+    const SPEED_SCALE = 0.0032; // Lat/lon step multiplier per m/s
 
     const render = () => {
       if (!canvas || !ctx) return;
@@ -250,44 +250,37 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
         p.lon += u * SPEED_SCALE;
         p.lat += v * SPEED_SCALE;
 
-        // Draw streamline if we have at least 2 points
-        if (p.trail.length >= 2) {
-          // Calculate lifecycle fade alpha
+        // Draw smooth continuous streamline trail
+        const trailLen = p.trail.length;
+        if (trailLen >= 2) {
           const lifeProgress = p.age / p.maxAge;
-          let alpha = 0.75;
-          if (lifeProgress < 0.2) {
-            alpha = (lifeProgress / 0.2) * 0.75;
-          } else if (lifeProgress > 0.75) {
-            alpha = ((1 - lifeProgress) / 0.25) * 0.75;
+          let overallAlpha = 0.85;
+          if (lifeProgress < 0.15) {
+            overallAlpha = (lifeProgress / 0.15) * 0.85;
+          } else if (lifeProgress > 0.8) {
+            overallAlpha = ((1 - lifeProgress) / 0.2) * 0.85;
           }
 
-          // Pick dynamic color based on wind velocity
-          let strokeColor = `rgba(2, 132, 199, ${alpha})`; // Sky blue
-          let headColor = `rgba(3, 105, 161, ${alpha * 1.1})`;
-          if (p.speed > 7.0) {
-            strokeColor = `rgba(13, 148, 136, ${alpha})`; // Teal for fast wind
-            headColor = `rgba(15, 118, 110, ${alpha * 1.1})`;
-          } else if (p.speed > 10.0) {
-            strokeColor = `rgba(79, 70, 229, ${alpha})`; // Indigo for high gusts
-            headColor = `rgba(67, 56, 202, ${alpha * 1.1})`;
-          }
+          // Draw multi-segment gradient trail from tail to head
+          for (let t = 0; t < trailLen - 1; t++) {
+            const p0 = p.trail[t];
+            const p1 = p.trail[t + 1];
+            const segAlpha = (t / (trailLen - 1)) * overallAlpha;
 
-          ctx.beginPath();
-          ctx.moveTo(p.trail[0].x, p.trail[0].y);
-          for (let t = 1; t < p.trail.length; t++) {
-            ctx.lineTo(p.trail[t].x, p.trail[t].y);
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.strokeStyle = `rgba(2, 132, 199, ${segAlpha})`;
+            ctx.lineWidth = 1.2 + (t / trailLen) * 0.8;
+            ctx.lineCap = 'round';
+            ctx.stroke();
           }
-          ctx.strokeStyle = strokeColor;
-          ctx.lineWidth = 1.6;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.stroke();
 
           // Draw head particle glowing dot
-          const head = p.trail[p.trail.length - 1];
+          const head = p.trail[trailLen - 1];
           ctx.beginPath();
-          ctx.arc(head.x, head.y, 1.4, 0, Math.PI * 2);
-          ctx.fillStyle = headColor;
+          ctx.arc(head.x, head.y, 1.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(56, 189, 248, ${overallAlpha})`;
           ctx.fill();
         }
       }
