@@ -66,7 +66,7 @@ export const TransportDashboard: React.FC = () => {
           }
         });
         const totalVecs = vectors.length;
-        const formattedRadar = directions.map(dir => ({
+        const formattedRadar = directions.map((dir) => ({
           subject: dir,
           A: totalVecs > 0 ? Math.round((dirCounts[dir] / totalVecs) * 100) : 0,
         }));
@@ -89,43 +89,23 @@ export const TransportDashboard: React.FC = () => {
           primary_source: item.source_region || 'N/A',
         });
       } else if (vectors.length > 0) {
-        // Compute dynamically from wind vectors
         const speeds = vectors.map((v: any) => v.speed).filter((s: any) => s !== undefined);
         const avgSpeed = speeds.length > 0 ? speeds.reduce((a: number, b: number) => a + b, 0) / speeds.length : 0.0;
-        
+
         const dirs = vectors.map((v: any) => v.direction).filter((d: any) => d !== undefined);
         const avgDir = dirs.length > 0 ? dirs.reduce((a: number, b: number) => a + b, 0) / dirs.length : 0.0;
-        
-        // 24-hour transport distance in km: speed (m/s) * 86.4
+
         const distKm = avgSpeed * 86.4;
-        
-        // Primary source sector based on average direction
-        let sourceSector = 'Local NCR';
-        const deg = avgDir;
-        if (deg >= 292.5 || deg < 22.5) sourceSector = 'North / Punjab';
-        else if (deg >= 22.5 && deg < 67.5) sourceSector = 'Northeast / Uttarakhand';
-        else if (deg >= 67.5 && deg < 112.5) sourceSector = 'East / Uttar Pradesh';
-        else if (deg >= 112.5 && deg < 157.5) sourceSector = 'Southeast / Madhya Pradesh';
-        else if (deg >= 157.5 && deg < 202.5) sourceSector = 'South / Central India';
-        else if (deg >= 202.5 && deg < 247.5) sourceSector = 'Southwest / Rajasthan';
-        else if (deg >= 247.5 && deg < 292.5) sourceSector = 'West / Thar Desert';
 
         setMetrics({
           avg_speed: avgSpeed,
           wind_dir: Math.round(avgDir),
           dist_km: distKm,
-          primary_source: sourceSector,
-        });
-      } else {
-        setMetrics({
-          avg_speed: 0,
-          wind_dir: 0,
-          dist_km: 0,
-          primary_source: 'N/A',
+          primary_source: selectedState || 'Indo-Gangetic Air Corridor',
         });
       }
 
-      // Fetch source attribution for bar chart
+      // 3. Get Source Attribution & Back-Trajectory
       const attributionRes = await transportApi.getSourceAttribution({
         receptor_lat: 28.6139,
         receptor_lon: 77.2090,
@@ -146,10 +126,12 @@ export const TransportDashboard: React.FC = () => {
         });
 
         const total = trajData.trajectory.length;
-        const mapped = Object.entries(counts).map(([region, count]) => ({
-          region,
-          percentage: Math.round((count / total) * 100),
-        })).sort((a, b) => b.percentage - a.percentage);
+        const mapped = Object.entries(counts)
+          .map(([region, count]) => ({
+            region,
+            percentage: Math.round((count / total) * 100),
+          }))
+          .sort((a, b) => b.percentage - a.percentage);
 
         setAttribution(mapped);
       } else {
@@ -189,14 +171,16 @@ export const TransportDashboard: React.FC = () => {
   }, [selectedState, selectedDate]);
 
   return (
-    <div className="flex-1 p-6 space-y-6">
+    <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-          Wind-Based Pollutant Transport
-          {loading && <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent"></span>}
+        <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+          Wind-Based Pollutant Transport & Dispersion
+          {loading && (
+            <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></span>
+          )}
         </h2>
-        <p className="text-slate-400 text-sm">
-          Meteorological integration using 850hPa pressure level wind fields to trace pathways.
+        <p className="text-slate-500 text-sm mt-1">
+          Meteorological integration using 850hPa pressure level wind fields to trace inter-state smoke pathways.
         </p>
       </div>
 
@@ -209,39 +193,54 @@ export const TransportDashboard: React.FC = () => {
       />
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Mean Wind Speed</span>
-          <div className="mt-2">
-            <span className="text-3xl font-extrabold text-white">{metrics.avg_speed.toFixed(1)}</span>
-            <span className="text-xs text-slate-500 ml-1">m/s (at 850 hPa)</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 perspective-1000">
+        <div className="glass-card card-3d p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-heading">
+            Mean Wind Speed (850 hPa)
+          </span>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
+              {metrics.avg_speed.toFixed(1)}
+            </span>
+            <span className="text-xs font-mono text-slate-500 font-semibold">m/s</span>
           </div>
+          <span className="text-xs text-slate-500 block mt-1">Advection kinetic velocity</span>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Wind Direction</span>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-amber-500">{metrics.wind_dir}°</span>
-            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-500/20 text-amber-300">
+        <div className="glass-card card-3d p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-amber-700 font-heading">
+            Wind Direction Vector
+          </span>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-4xl font-extrabold text-amber-700 font-heading tracking-tight">
+              {metrics.wind_dir}°
+            </span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-800 border border-amber-200">
               {getWindDirectionLabel(metrics.wind_dir)}
             </span>
           </div>
+          <span className="text-xs text-slate-500 block mt-1">Prevailing compass azimuth</span>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">24-hr Transport Distance</span>
-          <div className="mt-2">
-            <span className="text-3xl font-extrabold text-purple-400">
-              {metrics.dist_km.toFixed(1)}
+        <div className="glass-card card-3d p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-sky-700 font-heading">
+            24-hr Transport Reach
+          </span>
+          <div className="mt-3 flex items-baseline gap-1.5">
+            <span className="text-4xl font-extrabold text-sky-700 font-heading tracking-tight">
+              {metrics.dist_km.toFixed(0)}
             </span>
-            <span className="text-xs text-slate-500 ml-1">km / day</span>
+            <span className="text-xs font-mono text-slate-500 font-semibold">km / day</span>
           </div>
+          <span className="text-xs text-slate-500 block mt-1">Theoretical particle travel radius</span>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Primary Source Sector</span>
-          <div className="mt-2">
-            <span className="text-lg font-bold text-blue-400 truncate block">
+        <div className="glass-card card-3d p-6 rounded-2xl border border-slate-200/90 shadow-xs">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-teal-700 font-heading">
+            Primary Upwind Sector
+          </span>
+          <div className="mt-3">
+            <span className="text-xl font-extrabold text-teal-700 font-heading truncate block">
               {metrics.primary_source}
             </span>
             <span className="text-xs text-slate-500 block mt-1">Upwind contribution zone</span>
@@ -252,23 +251,25 @@ export const TransportDashboard: React.FC = () => {
       {/* Map & Diagrams */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Spatial Map with Trajectory Polylines */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[500px] flex flex-col">
+        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-slate-300">Lagrangian Back-Trajectories</h3>
-            <span className="text-xs text-slate-500">24-hour Backward Path</span>
+            <h3 className="text-sm font-heading font-bold text-slate-900">
+              Lagrangian Back-Trajectories & Wind Field
+            </h3>
+            <span className="text-xs font-mono text-slate-500">24-hour Backward Advection</span>
           </div>
 
-          <div className="flex-1 rounded-xl overflow-hidden relative">
+          <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
               points={[
-                { latitude: 28.6139, longitude: 77.2090, value: 35, label: 'Receptor: Delhi NCR', state: 'Delhi', color: '#a855f7' },
+                { latitude: 28.6139, longitude: 77.2090, value: 35, label: 'Receptor: Delhi NCR', state: 'Delhi', color: '#0284c7' },
                 ...trajectory.map((pt: any) => ({
                   latitude: pt.lat,
                   longitude: pt.lon,
                   value: 15,
                   label: `Trajectory point: hour ${pt.hour} (${pt.lat}, ${pt.lon})`,
                   state: 'Back-Trajectory',
-                  color: '#fbbf24'
+                  color: '#d97706'
                 })),
                 ...windVectors.filter((_, idx) => idx % 25 === 0).map((vec: any) => ({
                   latitude: vec.lat,
@@ -276,7 +277,9 @@ export const TransportDashboard: React.FC = () => {
                   value: vec.speed || 10,
                   label: `Wind Grid: ${vec.direction}° (${vec.speed} m/s)`,
                   state: 'Meteorological Grid',
-                  color: '#06b6d4'
+                  color: '#0d9488',
+                  wind_direction: vec.direction,
+                  wind_speed: vec.speed
                 })).filter((p: any) => p.latitude && p.longitude)
               ]}
               dataType="pollutant"
@@ -284,49 +287,64 @@ export const TransportDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Source Contribution */}
-        <div className="glass-card p-5 rounded-2xl h-[500px] flex flex-col justify-between">
+        {/* Source Contribution & Wind Rose */}
+        <div className="glass-card p-5 rounded-2xl h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
           <div className="h-full flex flex-col justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">Source Sector Attribution</h3>
-              <div className="h-[200px] mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">
+                  Source Sector Attribution
+                </h3>
+                <span className="text-[10px] font-mono text-slate-500">% Contribution</span>
+              </div>
+              <div className="h-[210px] mb-4">
                 {attribution && attribution.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={attribution} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis type="number" stroke="#64748b" fontSize={10} unit="%" />
-                      <YAxis dataKey="region" type="category" stroke="#64748b" fontSize={9} width={80} />
+                    <BarChart data={attribution} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis type="number" stroke="#94a3b8" fontSize={10} unit="%" tickLine={false} />
+                      <YAxis dataKey="region" type="category" stroke="#64748b" fontSize={9} width={90} tickLine={false} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                        labelStyle={{ color: '#94a3b8' }}
+                        contentStyle={{
+                          backgroundColor: '#ffffff',
+                          borderColor: '#e2e8f0',
+                          borderRadius: '0.75rem',
+                          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+                          fontSize: '11px',
+                        }}
                       />
-                      <Bar dataKey="percentage" fill="#38bdf8" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="percentage" fill="#0284c7" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-3 border border-dashed border-slate-800 rounded-xl">
-                    <span className="text-xl">📊</span>
-                    <span className="text-[10px] font-medium text-slate-400 mt-1">No Attribution Data</span>
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center p-3 border border-dashed border-slate-200 rounded-xl">
+                    <span className="text-xl mb-1">📊</span>
+                    <span className="text-xs font-medium text-slate-600">No Attribution Data</span>
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-slate-800 pt-4">
-                <h3 className="text-sm font-semibold text-slate-300 mb-2">Wind Rose Frequency</h3>
-                <div className="h-[150px]">
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">
+                    Wind Rose Frequency
+                  </h3>
+                  <span className="text-[10px] font-mono text-slate-500">Compass Octants</span>
+                </div>
+                <div className="h-[180px]">
                   {radarData && radarData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                        <PolarGrid stroke="#1e293b" />
-                        <PolarAngleAxis dataKey="subject" stroke="#64748b" fontSize={8} />
-                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#64748b" fontSize={8} />
-                        <Radar name="Wind Frequency" dataKey="A" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.3} />
+                      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                        <PolarGrid stroke="#e2e8f0" />
+                        <PolarAngleAxis dataKey="subject" stroke="#64748b" fontSize={9} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#94a3b8" fontSize={8} />
+                        <Radar name="Wind Frequency" dataKey="A" stroke="#0284c7" fill="#0284c7" fillOpacity={0.25} />
                       </RadarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-3 border border-dashed border-slate-800 rounded-xl">
-                      <span className="text-xl">🧭</span>
-                      <span className="text-[10px] font-medium text-slate-400 mt-1">No Wind Rose Data</span>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center p-3 border border-dashed border-slate-200 rounded-xl">
+                      <span className="text-xl mb-1">🧭</span>
+                      <span className="text-xs font-medium text-slate-600">No Wind Rose Data</span>
                     </div>
                   )}
                 </div>
@@ -338,4 +356,5 @@ export const TransportDashboard: React.FC = () => {
     </div>
   );
 };
+
 export default TransportDashboard;

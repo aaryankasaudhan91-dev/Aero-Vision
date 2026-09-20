@@ -61,18 +61,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onRefresh,
 }) => {
   return (
-    <div className="glass-card p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between mb-6">
+    <div className="glass-card p-4 rounded-2xl flex flex-wrap gap-4 items-center justify-between mb-6 shadow-xs border border-slate-200/90">
       <div className="flex flex-wrap gap-4 items-center">
         {/* State Filter */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Region / State</label>
+          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+            Region / State
+          </label>
           <select
             value={selectedState}
             onChange={(e) => {
               setSelectedState(e.target.value);
               if (setSelectedCity) setSelectedCity('');
             }}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer"
           >
             {states.map((st) => (
               <option key={st} value={st === 'All India' ? '' : st}>
@@ -85,11 +87,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* City Filter */}
         {setSelectedCity && cities && (
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">City</label>
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+              City
+            </label>
             <select
               value={selectedCity || ''}
               onChange={(e) => setSelectedCity(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer"
             >
               <option value="">All Cities</option>
               {cities.map((city) => (
@@ -103,7 +107,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
         {/* Date Filter */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Observation Date</label>
+          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+            Observation Date
+          </label>
           <input
             type="date"
             value={selectedDate}
@@ -113,18 +119,20 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setSelectedDate(val);
               }
             }}
-            className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer font-mono"
           />
         </div>
 
         {/* Pollutant Filter */}
         {pollutants && selectedPollutant && setSelectedPollutant && (
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Target Pollutant</label>
+            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+              Target Pollutant
+            </label>
             <select
               value={selectedPollutant}
               onChange={(e) => setSelectedPollutant(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-purple-500"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer"
             >
               {pollutants.map((p) => (
                 <option key={p} value={p}>
@@ -139,12 +147,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="flex gap-2">
         <button
           onClick={onRefresh}
-          className="bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-xl px-4 py-2 flex items-center gap-2 border border-slate-700 transition duration-150"
+          className="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl px-3.5 py-2 flex items-center gap-2 border border-slate-200 transition duration-150 cursor-pointer shadow-2xs hover:border-slate-300"
         >
-          🔄 Refresh Data
+          <span>🔄</span>
+          <span>Refresh Data</span>
         </button>
       </div>
     </div>
   );
 };
+
 export default FilterBar;

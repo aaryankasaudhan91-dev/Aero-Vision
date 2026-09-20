@@ -27,7 +27,7 @@ export const AqiDashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(getYesterdayString());
   const [loading, setLoading] = useState(false);
 
-  // States for data
+  // Real backend metrics state (no mock data)
   const [metrics, setMetrics] = useState({
     avg_aqi: 0,
     max_aqi: 0,
@@ -36,8 +36,6 @@ export const AqiDashboard: React.FC = () => {
   });
   const [stations, setStations] = useState<any[]>([]);
   const [trends, setTrends] = useState<any[]>([]);
-
-
 
   const getAqiClass = (aqi: number) => {
     if (aqi <= 50) return 'aqi-good';
@@ -51,12 +49,13 @@ export const AqiDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Get Overview Metrics
+      // 1. Get Overview Metrics from live backend API
       const overviewRes = await aqiApi.getOverview({
         date: selectedDate,
         state: selectedState,
         city: selectedCity,
       });
+
       if (overviewRes.data) {
         setMetrics({
           avg_aqi: overviewRes.data.avg_aqi || 0,
@@ -65,7 +64,7 @@ export const AqiDashboard: React.FC = () => {
           category: overviewRes.data.aqi_category || 'N/A',
         });
 
-        // Map observations to flat station structure for Map and Cards
+        // Map real observations to flat station structure for Map and Cards
         const mappedStations = (overviewRes.data.observations || []).map((o: any) => ({
           station_id: o.station_id,
           station_name: o.cpcb_stations?.station_name || 'Unknown',
@@ -88,7 +87,7 @@ export const AqiDashboard: React.FC = () => {
       ) as string[];
       setCitiesList(uniqueCities);
 
-      // 3. Get Trends
+      // 3. Get Real Historical Trends
       const start = new Date(selectedDate);
       start.setDate(start.getDate() - 7);
       const trendsRes = await aqiApi.getTrends({
@@ -99,14 +98,14 @@ export const AqiDashboard: React.FC = () => {
       });
       setTrends(trendsRes.data || []);
 
-      // 4. Get Predictions
+      // 4. Trigger Real Predictions
       await aqiApi.getPredictions({
         date: selectedDate,
         state: selectedState,
       });
 
     } catch (err: any) {
-      console.error("Error fetching AQI dashboard data:", err);
+      console.error("Error fetching live AQI dashboard data:", err);
       setStations([]);
       setTrends([]);
     } finally {
@@ -129,19 +128,32 @@ export const AqiDashboard: React.FC = () => {
   }, [selectedState, selectedCity, selectedDate]);
 
   return (
-    <div className="flex-1 p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
+      {/* Header & Status */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            National AQI Overview
-            {loading && <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent"></span>}
-          </h2>
-          <p className="text-slate-400 text-sm">
-            Real-time CPCB ground monitoring and hybrid estimation.
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse"></span>
+            <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900">
+              National AQI Overview
+            </h2>
+            {loading && (
+              <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent ml-2"></span>
+            )}
+          </div>
+          <p className="text-slate-500 text-sm mt-1">
+            Real-time CPCB ground telemetry, Sentinel-5P multispectral estimation, and 3D spatial cartography.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-slate-600 border border-slate-200 shadow-2xs">
+            Ground Truth: CPCB Realtime
+          </span>
         </div>
       </div>
 
+      {/* Global Filter Bar */}
       <FilterBar
         selectedState={selectedState}
         setSelectedState={setSelectedState}
@@ -153,52 +165,110 @@ export const AqiDashboard: React.FC = () => {
         onRefresh={fetchData}
       />
 
-      {/* Metrics Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Average AQI</span>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-extrabold text-white">{metrics.avg_aqi}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getAqiClass(metrics.avg_aqi)}`}>
+      {/* 4 Minimalist 3D-Tilt Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 perspective-1000">
+        {/* Card 1: Average AQI */}
+        <div className="glass-card card-3d p-5 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden group">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-heading">
+              National Mean AQI
+            </span>
+            <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+          </div>
+          <div className="flex items-baseline gap-2.5 mt-3">
+            <span className="text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
+              {metrics.avg_aqi}
+            </span>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${getAqiClass(metrics.avg_aqi)}`}>
               {metrics.category}
             </span>
           </div>
+          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
+            <span>📡</span> Area-weighted nationwide aggregate
+          </p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Maximum AQI</span>
-          <div className="mt-2">
-            <span className="text-3xl font-extrabold text-red-400">{metrics.max_aqi}</span>
-            <span className="text-xs text-slate-500 block mt-1">Severe Spike Risk</span>
+        {/* Card 2: Maximum AQI */}
+        <div className="glass-card card-3d p-5 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden group">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-rose-600 font-heading">
+              Apex Spike Hotspot
+            </span>
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
           </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-4xl font-extrabold text-rose-600 font-heading tracking-tight">
+              {metrics.max_aqi}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+              Hazardous
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
+            <span>⚠️</span> Critical respiratory threshold spike
+          </p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Minimum AQI</span>
-          <div className="mt-2">
-            <span className="text-3xl font-extrabold text-emerald-400">{metrics.min_aqi}</span>
-            <span className="text-xs text-slate-500 block mt-1">Clean Air Pockets</span>
+        {/* Card 3: Minimum AQI */}
+        <div className="glass-card card-3d p-5 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden group">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-teal-700 font-heading">
+              Clean Baseline Pocket
+            </span>
+            <span className="w-2 h-2 rounded-full bg-teal-500"></span>
           </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-4xl font-extrabold text-teal-700 font-heading tracking-tight">
+              {metrics.min_aqi}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+              Optimal
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
+            <span>🌿</span> Lowest recorded ambient index
+          </p>
         </div>
 
-        <div className="glass-card p-6 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Monitored Stations</span>
-          <div className="mt-2">
-            <span className="text-3xl font-extrabold text-purple-400">{stations.length}</span>
-            <span className="text-xs text-slate-500 block mt-1">Active CPCB Nodes</span>
+        {/* Card 4: Active Stations */}
+        <div className="glass-card card-3d p-5 rounded-2xl border border-slate-200/90 shadow-xs relative overflow-hidden group">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 font-heading">
+              Monitored Stations
+            </span>
+            <span className="text-xs">🛰️</span>
           </div>
+          <div className="flex items-baseline gap-2 mt-3">
+            <span className="text-4xl font-extrabold text-sky-700 font-heading tracking-tight">
+              {stations.length}
+            </span>
+            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+              Live
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1">
+            <span>🟢</span> Active CPCB continuous ambient nodes
+          </p>
         </div>
       </div>
 
-      {/* Main Map & Graph Section */}
+      {/* Main 3D Cartography Map & Trend Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Map Panel */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[500px] flex flex-col">
+        {/* Main 3D Map Viewport (Takes 2 Columns) */}
+        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-slate-300">Spatial AQI Distribution</h3>
-            <span className="text-xs text-slate-500">Ground Sensors</span>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+              <h3 className="text-sm font-heading font-bold text-slate-800">
+                Spatial Subcontinent Distribution
+              </h3>
+            </div>
+            <span className="text-[11px] font-mono text-slate-500">
+              Model: Sentinel-5P + CPCB Hybrid
+            </span>
           </div>
-          <div className="flex-1 rounded-xl overflow-hidden relative">
+
+          <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
               points={stations.map((stn) => ({
                 latitude: stn.latitude,
@@ -212,75 +282,172 @@ export const AqiDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Side Panel: Trends & Predictions */}
-        <div className="glass-card p-5 rounded-2xl flex flex-col justify-between h-[500px]">
+        {/* Side Panel: Trends & Category Distribution */}
+        <div className="glass-card p-5 rounded-2xl flex flex-col justify-between h-[560px] border border-slate-200/90 shadow-xs">
+          {/* Top: 7-Day Trend Chart */}
           <div>
-            <h3 className="text-sm font-semibold text-slate-300 mb-4">Historical AQI Trend</h3>
-            <div className="h-[180px]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">
+                7-Day Historical Trend
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">µg/m³ & AQI</span>
+            </div>
+            <div className="h-[200px]">
               {trends && trends.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trends}>
+                  <AreaChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="aqiGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                      <linearGradient id="aqiLightGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0284c7" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
-                    <YAxis stroke="#64748b" fontSize={10} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                      labelStyle={{ color: '#94a3b8' }}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+                        fontSize: '11px',
+                        fontFamily: 'Inter',
+                      }}
+                      labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
                     />
-                    <Area type="monotone" dataKey="aqi" stroke="#a855f7" strokeWidth={2} fillOpacity={1} fill="url(#aqiGrad)" />
+                    <Area
+                      type="monotone"
+                      dataKey="aqi"
+                      stroke="#0284c7"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#aqiLightGrad)"
+                    />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-3 border border-dashed border-slate-800 rounded-xl">
-                  <span className="text-xl">📈</span>
-                  <span className="text-[10px] font-medium text-slate-400 mt-1">No Trend Data Available</span>
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center p-4 border border-dashed border-slate-200 rounded-xl">
+                  <span className="text-2xl mb-1">📈</span>
+                  <span className="text-xs font-medium text-slate-500">No Trend Telemetry Available</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="border-t border-slate-800 pt-4">
-            <h3 className="text-sm font-semibold text-slate-300 mb-4">AQI Category Distribution</h3>
-            <div className="h-[180px]">
+          {/* Bottom: Distribution Histogram */}
+          <div className="border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">
+                Category Distribution
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">Station Breakdown</span>
+            </div>
+            <div className="h-[200px]">
               {stations && stations.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: 'Good', count: stations.filter(s => (s.aqi || 0) <= 50).length },
-                    { name: 'Satis.', count: stations.filter(s => (s.aqi || 0) > 50 && (s.aqi || 0) <= 100).length },
-                    { name: 'Mod.', count: stations.filter(s => (s.aqi || 0) > 100 && (s.aqi || 0) <= 200).length },
-                    { name: 'Poor', count: stations.filter(s => (s.aqi || 0) > 200).length }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
-                    <YAxis stroke="#64748b" fontSize={10} />
+                  <BarChart
+                    data={[
+                      { name: 'Good', count: stations.filter((s) => (s.aqi || 0) <= 50).length },
+                      { name: 'Satis.', count: stations.filter((s) => (s.aqi || 0) > 50 && (s.aqi || 0) <= 100).length },
+                      { name: 'Mod.', count: stations.filter((s) => (s.aqi || 0) > 100 && (s.aqi || 0) <= 200).length },
+                      { name: 'Poor', count: stations.filter((s) => (s.aqi || 0) > 200 && (s.aqi || 0) <= 300).length },
+                      { name: 'Severe', count: stations.filter((s) => (s.aqi || 0) > 300).length },
+                    ]}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+                        fontSize: '11px',
+                      }}
                     />
-                    <Bar dataKey="count" fill="#8b5cf6">
-                      <Cell fill="#009966" />
-                      <Cell fill="#58B453" />
-                      <Cell fill="#FFDE33" />
-                      <Cell fill="#FF9933" />
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                      <Cell fill="#0d9488" />
+                      <Cell fill="#10b981" />
+                      <Cell fill="#d97706" />
+                      <Cell fill="#ea580c" />
+                      <Cell fill="#7c3aed" />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-3 border border-dashed border-slate-800 rounded-xl">
-                  <span className="text-xl">📊</span>
-                  <span className="text-[10px] font-medium text-slate-400 mt-1">No Station Data for Distribution</span>
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center p-4 border border-dashed border-slate-200 rounded-xl">
+                  <span className="text-2xl mb-1">📊</span>
+                  <span className="text-xs font-medium text-slate-500">No Station Distribution</span>
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Real Live CPCB Station Telemetry Table */}
+      <div className="glass-card p-5 rounded-2xl border border-slate-200/90 shadow-xs">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <h3 className="text-sm font-heading font-bold text-slate-900">
+              Live Ground Monitoring Stations ({stations.length})
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              CPCB Continuous Ambient Air Quality Monitoring Systems (CAAQMS)
+            </p>
+          </div>
+          <span className="px-3 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-xs font-mono">
+            {selectedDate}
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-heading uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-4">Station Name</th>
+                <th className="py-2.5 px-4">City</th>
+                <th className="py-2.5 px-4">State</th>
+                <th className="py-2.5 px-4 text-right">Latitude / Longitude</th>
+                <th className="py-2.5 px-4 text-right">AQI</th>
+                <th className="py-2.5 px-4 text-center">Category</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {stations.slice(0, 10).map((stn, idx) => (
+                <tr key={stn.station_id || idx} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-2.5 px-4 font-medium text-slate-900">{stn.station_name}</td>
+                  <td className="py-2.5 px-4 text-slate-600">{stn.city || '—'}</td>
+                  <td className="py-2.5 px-4 text-slate-600">{stn.state || '—'}</td>
+                  <td className="py-2.5 px-4 text-right font-mono text-slate-500">
+                    {stn.latitude?.toFixed(2)}°, {stn.longitude?.toFixed(2)}°
+                  </td>
+                  <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
+                    {stn.aqi ?? 'N/A'}
+                  </td>
+                  <td className="py-2.5 px-4 text-center">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${getAqiClass(stn.aqi || 0)}`}>
+                      {stn.aqi <= 50 ? 'Good' : stn.aqi <= 100 ? 'Satisfactory' : stn.aqi <= 200 ? 'Moderate' : stn.aqi <= 300 ? 'Poor' : stn.aqi <= 400 ? 'Very Poor' : 'Severe'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {stations.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    No stations reporting for the chosen date or region.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
+
 export default AqiDashboard;

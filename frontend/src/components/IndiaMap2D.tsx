@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip, ImageOverlay, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, ImageOverlay, Marker, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
+import WindStreamlinesOverlay from './WindStreamlinesOverlay';
+import { INDIA_GEOJSON, INVERTED_INDIA_MASK, INDIA_CENTER, INDIA_MAP_BOUNDS } from '../utils/indiaMask';
 
 interface MapPoint {
   latitude: number;
@@ -21,8 +23,6 @@ interface IndiaMap2DProps {
 }
 
 export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variableName, unit }) => {
-  const defaultCenter: [number, number] = [20.5937, 78.9629]; // Center of India
-  const defaultZoom = 4.5;
   const [displayMode, setDisplayMode] = useState<'smooth' | 'hybrid' | 'grid'>('hybrid');
   const [showWind, setShowWind] = useState(true);
 
@@ -264,43 +264,42 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-slate-200/80 bg-slate-50 isolate z-0">
-      {/* Floating Display Mode & Wind Toggles */}
-      <div className="absolute top-4 right-4 z-10 glass-card p-1.5 rounded-lg border border-slate-200 flex gap-2 shadow-md pointer-events-auto">
+      {/* Floating Display Mode & Wind Flow Toggles (Positioned under 2D/3D selector) */}
+      <div className="absolute top-16 right-4 z-10 glass-card p-1.5 rounded-xl border border-slate-200/90 flex items-center gap-2 shadow-sm pointer-events-auto">
         <div className="flex gap-1 border-r border-slate-200 pr-2">
           {(['smooth', 'hybrid', 'grid'] as const).map(mode => (
             <button
               key={mode}
               onClick={() => setDisplayMode(mode)}
-              className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all duration-150 ${
+              className={`px-2 py-1 rounded-md text-[9px] font-heading font-bold uppercase tracking-wider transition-all duration-150 ${
                 displayMode === mode
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
               }`}
             >
               {mode}
             </button>
           ))}
         </div>
-        {hasWindData && (
-          <button
-            onClick={() => setShowWind(!showWind)}
-            className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider transition-all duration-150 flex items-center gap-1 ${
-              showWind
-                ? 'bg-cyan-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <span>🧭</span>
-            <span>Wind</span>
-          </button>
-        )}
+        <button
+          onClick={() => setShowWind(!showWind)}
+          className={`px-2.5 py-1 rounded-md text-[10px] font-heading font-semibold transition-all duration-150 flex items-center gap-1.5 ${
+            showWind
+              ? 'bg-sky-600 text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+          title="Toggle Real-Time Animated Wind Streamlines Overlay"
+        >
+          <span className={showWind ? "animate-pulse" : ""}>🌬️</span>
+          <span>Wind Flow {showWind ? 'ON' : 'OFF'}</span>
+        </button>
       </div>
 
       <MapContainer
-        center={defaultCenter}
-        zoom={defaultZoom}
-        minZoom={4.5}
-        maxBounds={[[5.0, 65.0], [38.5, 99.0]]}
+        center={INDIA_CENTER}
+        zoom={4.8}
+        minZoom={4.6}
+        maxBounds={INDIA_MAP_BOUNDS}
         maxBoundsViscosity={1.0}
         scrollWheelZoom={true}
         className="w-full h-full"
@@ -320,6 +319,33 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
             opacity={0.45}
           />
         )}
+
+        {/* Inverted Land Mask: Conceals all non-India territory with clean UI background so only India is visible */}
+        <GeoJSON
+          data={INVERTED_INDIA_MASK}
+          interactive={false}
+          style={{
+            fillColor: '#f8fafc',
+            fillOpacity: 0.96,
+            stroke: false,
+          }}
+        />
+
+        {/* Crisp Official India Cartographic Boundary Outline */}
+        <GeoJSON
+          data={INDIA_GEOJSON}
+          interactive={false}
+          style={{
+            color: '#0284c7',
+            weight: 1.8,
+            opacity: 0.85,
+            fillColor: 'transparent',
+            fillOpacity: 0,
+          }}
+        />
+
+        {/* Real-Time Animated Wind Flow Streamlines Canvas Overlay (Clipped to India) */}
+        <WindStreamlinesOverlay points={points} visible={showWind} />
 
         {/* Render Wind Vector arrows */}
         {showWind && hasWindData && points.map((pt, idx) => {

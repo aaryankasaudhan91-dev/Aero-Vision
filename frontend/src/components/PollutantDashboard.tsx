@@ -42,9 +42,9 @@ export const PollutantDashboard: React.FC = () => {
 
   const getPollutantColor = (val: number, pol: string) => {
     const limit = standards[pol] || 100;
-    if (val <= limit * 0.5) return '#10b981'; // Good/Satisfactory
-    if (val <= limit) return '#fbbf24'; // Moderate
-    return '#ef4444'; // Exceeds limit
+    if (val <= limit * 0.5) return '#0d9488'; // Clean Teal
+    if (val <= limit) return '#d97706'; // Moderate Amber
+    return '#dc2626'; // Exceeds limit (Red)
   };
 
   const fetchData = async () => {
@@ -107,14 +107,16 @@ export const PollutantDashboard: React.FC = () => {
   }, [selectedState, selectedCity, selectedDate, selectedPollutant]);
 
   return (
-    <div className="flex-1 p-6 space-y-6">
+    <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
           Target Pollutant Distributions
-          {loading && <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent"></span>}
+          {loading && (
+            <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></span>
+          )}
         </h2>
-        <p className="text-slate-400 text-sm">
-          Granular spatial monitoring and regulatory standards comparison.
+        <p className="text-slate-500 text-sm mt-1">
+          Granular spatial monitoring and regulatory standards comparison across Indian monitoring networks.
         </p>
       </div>
 
@@ -133,18 +135,18 @@ export const PollutantDashboard: React.FC = () => {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Spatial Map */}
-        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[520px] flex flex-col">
+        {/* Spatial 3D / 2D Map */}
+        <div className="lg:col-span-2 glass-card p-4 rounded-2xl h-[560px] flex flex-col border border-slate-200/90 shadow-xs">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-slate-300">
-              {selectedPollutant} Concentration Map
+            <h3 className="text-sm font-heading font-bold text-slate-900">
+              {selectedPollutant} Spatial Concentration Map
             </h3>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs font-mono text-slate-500">
               CPCB Standard: {standards[selectedPollutant]} {selectedPollutant === 'CO' ? 'mg/m³' : 'μg/m³'}
             </span>
           </div>
 
-          <div className="flex-1 rounded-xl overflow-hidden relative">
+          <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
               points={dataList
                 .map((item: any) => {
@@ -168,24 +170,39 @@ export const PollutantDashboard: React.FC = () => {
         </div>
 
         {/* Top 10 Polluted Stations Chart */}
-        <div className="glass-card p-5 rounded-2xl h-[520px] flex flex-col justify-between">
+        <div className="glass-card p-5 rounded-2xl h-[560px] flex flex-col justify-between border border-slate-200/90 shadow-xs">
           <div className="h-full flex flex-col">
-            <h3 className="text-sm font-semibold text-slate-300 mb-4">
-              Top 10 Hotspots ({selectedPollutant})
-            </h3>
-            <div className="flex-1 h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">
+                Top 10 Hotspots ({selectedPollutant})
+              </h3>
+              <span className="text-[10px] font-mono text-slate-500">Highest Values</span>
+            </div>
+
+            <div className="flex-1 h-[440px]">
               {ranking && ranking.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={ranking} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis type="number" stroke="#64748b" fontSize={10} />
-                    <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={8} width={80} />
+                  <BarChart data={ranking} layout="vertical" margin={{ left: 10, right: 20, top: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                    <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={9} width={90} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }}
-                      labelStyle={{ color: '#94a3b8' }}
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                        borderRadius: '0.75rem',
+                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+                        fontSize: '11px',
+                      }}
+                      labelStyle={{ color: '#0f172a', fontWeight: 'bold' }}
                     />
-                    <ReferenceLine x={standards[selectedPollutant]} stroke="#ef4444" strokeDasharray="3 3" label={{ value: 'Limit', fill: '#ef4444', fontSize: 10 }} />
-                    <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]}>
+                    <ReferenceLine
+                      x={standards[selectedPollutant]}
+                      stroke="#dc2626"
+                      strokeDasharray="3 3"
+                      label={{ value: 'Limit', fill: '#dc2626', fontSize: 10, position: 'top' }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {ranking.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={getPollutantColor(entry.value, selectedPollutant)} />
                       ))}
@@ -193,10 +210,12 @@ export const PollutantDashboard: React.FC = () => {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-6 border border-dashed border-slate-800 rounded-xl">
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center p-6 border border-dashed border-slate-200 rounded-xl">
                   <span className="text-2xl mb-2">📊</span>
-                  <span className="text-xs font-medium text-slate-400">No Hotspot Data Available</span>
-                  <p className="text-[10px] text-slate-500 mt-1 max-w-xs">No active stations exceeded the standard metrics or reported observations for this pollutant on this date.</p>
+                  <span className="text-xs font-medium text-slate-600">No Hotspot Data Available</span>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-xs">
+                    No active stations exceeded standard metrics or reported readings for this pollutant on this date.
+                  </p>
                 </div>
               )}
             </div>
@@ -206,4 +225,5 @@ export const PollutantDashboard: React.FC = () => {
     </div>
   );
 };
+
 export default PollutantDashboard;

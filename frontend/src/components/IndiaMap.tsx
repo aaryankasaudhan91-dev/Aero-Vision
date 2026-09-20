@@ -26,8 +26,9 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   dataType,
   pollutantName,
   variableName,
-  unit
+  unit,
 }) => {
+  // Priority set to 2D Planar GIS Map by default, with 3D Orbit accessible via toggle
   const [mapMode, setMapMode] = useState<'2D' | '3D'>('2D');
 
   // Map variableName and unit based on dataType if not explicitly provided
@@ -46,28 +47,32 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
   );
 
   return (
-    <div className="w-full h-full relative group isolate z-0">
-      {/* 2D / 3D Toggle Controller */}
-      <div className="absolute top-4 left-4 z-10 glass-card p-1 rounded-lg border border-slate-200 flex gap-1 shadow-lg pointer-events-auto transition-opacity duration-300 opacity-90 hover:opacity-100">
+    <div className="w-full h-full relative group isolate z-0 rounded-xl overflow-hidden">
+      {/* 2D / 3D Toggle Controller (2D GIS Priority Default) */}
+      <div className="absolute top-4 right-4 z-20 glass-panel p-1 rounded-xl border border-slate-200/90 flex gap-1 shadow-sm pointer-events-auto">
         <button
           onClick={() => setMapMode('2D')}
-          className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
             mapMode === '2D'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-sky-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
           }`}
+          aria-label="Switch to 2D Planar GIS Map (Priority Default)"
         >
-          2D Map
+          <span>🗺️</span>
+          <span>2D GIS</span>
         </button>
         <button
           onClick={() => setMapMode('3D')}
-          className={`px-2.5 py-1 rounded-md text-[9px] font-extrabold uppercase tracking-wider transition-all duration-150 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
             mapMode === '3D'
-              ? 'bg-purple-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-sky-600 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
           }`}
+          aria-label="Switch to 3D Extruded Orbit Map"
         >
-          3D Map
+          <span>🌐</span>
+          <span>3D Orbit</span>
         </button>
       </div>
 
