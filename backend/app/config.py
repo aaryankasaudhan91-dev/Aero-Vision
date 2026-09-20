@@ -3,26 +3,30 @@ Application configuration loaded from environment variables.
 All secrets and service URLs are centralized here — no hardcoded values.
 """
 
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import List
 
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_ENV_FILE = _BACKEND_DIR / ".env"
+
 
 class Settings(BaseSettings):
-    """Application settings loaded from .env file."""
+    """Application settings loaded from environment or .env file."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(_ENV_FILE), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
     )
 
     # ── Supabase ──
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SUPABASE_SERVICE_ROLE_KEY: str
-    DATABASE_URL: str
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    DATABASE_URL: str = ""
 
     # ── Google Earth Engine ──
     GEE_PROJECT_ID: str = ""

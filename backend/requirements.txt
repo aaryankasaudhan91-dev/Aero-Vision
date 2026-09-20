@@ -10,7 +10,7 @@ asyncpg==0.30.0
 sqlalchemy[asyncio]==2.0.36
 geoalchemy2==0.15.2
 
-# Geospatial
+# Geospatial & Weather Data
 earthengine-api==1.4.2
 rasterio==1.4.3
 geopandas==1.0.1
@@ -18,42 +18,32 @@ xarray==2024.11.0
 netCDF4==1.7.2
 shapely==2.0.6
 pyproj==3.7.0
-gdal==3.10.0
 
-# Machine Learning
+# Machine Learning & Spatial Stats
 scikit-learn==1.6.0
 xgboost==2.1.3
 numpy==2.1.3
 pandas==2.2.3
 scipy==1.14.1
+libpysal==4.12.1
+esda==2.6.0
+pointpats==2.5.0
 
-# Deep Learning
-tensorflow==2.18.0
-torch==2.5.1
-torchvision==0.20.1
+# Deep Learning (CPU inference)
+tensorflow-cpu==2.18.0
 
-# Data Ingestion
+# Data Ingestion & APIs
 requests==2.32.3
 aiohttp==3.11.10
 cdsapi==0.7.5
 beautifulsoup4==4.12.3
 
-# Visualization
-matplotlib==3.9.3
-plotly==5.24.1
-cartopy==0.24.1
-folium==0.19.2
-
-# Spatial Statistics
-libpysal==4.12.1
-esda==2.6.0
-pointpats==2.5.0
-
-# PDF Generation
+# Visualization & PDF
 reportlab==4.2.5
 markdown==3.7
+matplotlib==3.9.3
 
-# Utilities
+# Utilities & Networking
 pydantic==2.10.3
 pydantic-settings==2.7.0
 httpx==0.28.1
@@ -62,3 +52,5 @@ joblib==1.4.2
 tqdm==4.67.1
 loguru==0.7.3
 google-genai==1.75.0
+dnspython>=2.6.1
+

@@ -52,6 +52,7 @@ async def add_security_headers(request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -68,9 +69,11 @@ app.include_router(weather.router, prefix="/api/weather", tags=["Weather"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 
 
+@app.get("/")
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "project": "AeroVision", "version": "1.0.0"}
+    return {"status": "healthy", "project": "AeroVision", "version": "1.2.1"}
 
 
 if __name__ == "__main__":
