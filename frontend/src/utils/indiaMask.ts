@@ -77,3 +77,63 @@ export const INDIA_MAP_BOUNDS: [[number, number], [number, number]] = [
   [6.0, 68.0],
   [37.5, 97.5]
 ];
+
+// Expanded regional boundaries that encompass India and its surrounding countries & water bodies
+// (Pakistan, Afghanistan, Nepal, Bhutan, Bangladesh, Myanmar, Sri Lanka, Arabian Sea, Bay of Bengal)
+export const REGIONAL_MAP_BOUNDS: [[number, number], [number, number]] = [
+  [0.0, 55.0],
+  [40.0, 105.0]
+];
+
+/**
+ * Clips any HTMLCanvasElement image data strictly to India's land borders
+ * using HTML5 Canvas vector clipping (destination-in).
+ * Pixels inside India retain their exact colors, while pixels outside India
+ * become completely transparent (alpha = 0), allowing surrounding countries
+ * and water bodies on the base map to remain fully visible.
+ */
+export function clipCanvasToIndia(
+  sourceCanvas: HTMLCanvasElement,
+  minLat: number,
+  maxLat: number,
+  minLon: number,
+  maxLon: number
+): HTMLCanvasElement {
+  const targetCanvas = document.createElement('canvas');
+  const outWidth = 600;
+  const outHeight = 600;
+  targetCanvas.width = outWidth;
+  targetCanvas.height = outHeight;
+  const ctx = targetCanvas.getContext('2d');
+  if (!ctx) return sourceCanvas;
+
+  // 1. Draw smooth interpolated content onto high-res output canvas
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(sourceCanvas, 0, 0, outWidth, outHeight);
+
+  // 2. Use destination-in composite mode to clip strictly to India's MultiPolygon
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+
+  const coordinates = INDIA_GEOJSON.features[0].geometry.coordinates as [number, number][][][];
+  coordinates.forEach(poly => {
+    const ring = poly[0];
+    ring.forEach(([lon, lat], i) => {
+      const x = ((lon - minLon) / (maxLon - minLon)) * outWidth;
+      const y = ((maxLat - lat) / (maxLat - minLat)) * outHeight;
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.closePath();
+  });
+
+  ctx.fillStyle = '#000000';
+  ctx.fill();
+
+  return targetCanvas;
+}
+

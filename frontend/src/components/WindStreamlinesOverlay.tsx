@@ -137,9 +137,9 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
     const spawnParticle = (p?: Particle): Particle => {
       const bounds = map.getBounds();
       const minLat = Math.max(6.5, bounds.getSouth());
-      const maxLat = Math.min(36.5, bounds.getNorth());
-      const minLon = Math.max(68.5, bounds.getWest());
-      const maxLon = Math.min(97.0, bounds.getEast());
+      const maxLat = Math.min(37.5, bounds.getNorth());
+      const minLon = Math.max(68.0, bounds.getWest());
+      const maxLon = Math.min(97.5, bounds.getEast());
 
       // Guarantee particle is spawned inside India
       let lat = 22.0;

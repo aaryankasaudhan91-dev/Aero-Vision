@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, ImageOverlay, Marker, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import WindStreamlinesOverlay from './WindStreamlinesOverlay';
-import { INDIA_GEOJSON, INVERTED_INDIA_MASK, INDIA_CENTER, INDIA_MAP_BOUNDS } from '../utils/indiaMask';
+import { INDIA_GEOJSON, INDIA_CENTER, REGIONAL_MAP_BOUNDS, clipCanvasToIndia } from '../utils/indiaMask';
 
 interface MapPoint {
   latitude: number;
@@ -195,14 +195,16 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
         }
       }
       ctx.putImageData(imgData, 0, 0);
-      return canvas.toDataURL();
+      // Vector-clip strictly to India's land boundary so surrounding countries are completely untouched
+      const clippedCanvas = clipCanvasToIndia(canvas, 5.25, 38.25, 67.25, 98.75);
+      return clippedCanvas.toDataURL();
     }
 
     // 2. SPARSE POINT PATTERN (e.g. AQI stations, fire hotspots, trajectories)
     // Run Inverse Distance Weighting (IDW) to interpolate a continuous smooth field
     const canvas = document.createElement('canvas');
-    const width = 50;  // 50 x 50 is fast and stretches smoothly
-    const height = 50;
+    const width = 60;  // 60 x 60 is fast and stretches smoothly
+    const height = 60;
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
@@ -259,7 +261,9 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
     }
 
     ctx.putImageData(imgData, 0, 0);
-    return canvas.toDataURL();
+    // Vector-clip strictly to India's land boundary so surrounding countries are completely untouched
+    const clippedCanvas = clipCanvasToIndia(canvas, minLat, maxLat, minLon, maxLon);
+    return clippedCanvas.toDataURL();
   }, [points, dataType]);
 
   return (
@@ -298,38 +302,27 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
       <MapContainer
         center={INDIA_CENTER}
         zoom={4.8}
-        minZoom={4.6}
-        maxBounds={INDIA_MAP_BOUNDS}
-        maxBoundsViscosity={1.0}
+        minZoom={3.8}
+        maxBounds={REGIONAL_MAP_BOUNDS}
+        maxBoundsViscosity={0.7}
         scrollWheelZoom={true}
         className="w-full h-full"
         style={{ height: '100%', width: '100%', background: '#f8fafc' }}
       >
-        {/* Beautiful Light-Themed OpenStreetMap Layer (Watermark-Free & Open) */}
+        {/* Beautiful Light-Themed OpenStreetMap Layer (Displays India and all surrounding countries & water bodies) */}
         <TileLayer
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
 
-        {/* Render the smooth continuous color overlay image */}
+        {/* Render the smooth continuous color overlay image - precisely clipped to India borders */}
         {(displayMode === 'smooth' || displayMode === 'hybrid') && imageUrl && (
           <ImageOverlay
             url={imageUrl}
             bounds={gridBounds}
-            opacity={0.45}
+            opacity={0.52}
           />
         )}
-
-        {/* Inverted Land Mask: Conceals all non-India territory with clean UI background so only India is visible */}
-        <GeoJSON
-          data={INVERTED_INDIA_MASK}
-          interactive={false}
-          style={{
-            fillColor: '#f8fafc',
-            fillOpacity: 0.96,
-            stroke: false,
-          }}
-        />
 
         {/* Crisp Official India Cartographic Boundary Outline */}
         <GeoJSON
@@ -337,8 +330,8 @@ export const IndiaMap2D: React.FC<IndiaMap2DProps> = ({ points, dataType, variab
           interactive={false}
           style={{
             color: '#0284c7',
-            weight: 1.8,
-            opacity: 0.85,
+            weight: 2,
+            opacity: 0.9,
             fillColor: 'transparent',
             fillOpacity: 0,
           }}
