@@ -18,6 +18,11 @@
 </p>
 
 <p align="center">
+  <strong>🚀 Live Web Application:</strong> <a href="https://aero-vision-chi.vercel.app/">https://aero-vision-chi.vercel.app/</a><br/>
+  <strong>⚡ Production API Endpoint:</strong> <a href="https://aero-vision.onrender.com/api/health">https://aero-vision.onrender.com/api</a>
+</p>
+
+<p align="center">
   <strong>Lead Developer / Student Researcher:</strong> Aaryan Kasaudhan (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>)<br/>
   <em>Academic Student Research Project · Non-Commercial Open Science Demonstration</em>
 </p>
@@ -44,6 +49,17 @@
 | 📝 **Research Reports** | Peer-quality PDF scientific reports with auto-generated methodology, analysis charts, and instant export |
 | 🔄 **Real-Time Sync Engine** | Header telemetry indicator, 15-second dashboard refresh, and dedicated 5s/10s/30s live stream polling cadence |
 | 🛡️ **Resilient Hybrid Database** | Cloud Supabase (PostgreSQL + PostGIS) with seamless offline fallback to embedded SQLite (`aerovision.db`) |
+
+---
+
+## 🚀 Live Production Links
+
+| Service | Host | URL |
+|---|---|---|
+| 🌐 **Frontend Application** | Vercel Edge CDN | [https://aero-vision-chi.vercel.app/](https://aero-vision-chi.vercel.app/) |
+| ⚡ **Backend REST API** | Render Cloud | [https://aero-vision.onrender.com](https://aero-vision.onrender.com) |
+| 📚 **Interactive Swagger API Docs** | Render Cloud | [https://aero-vision.onrender.com/docs](https://aero-vision.onrender.com/docs) |
+| 🗄️ **Geospatial Database** | Supabase Cloud (PostGIS) | AWS ap-south-1 (Mumbai) |
 
 ---
 

@@ -88,8 +88,15 @@ const WATER_BODIES = [
 ];
 
 // Helper to determine color corresponding to an interpolated value
-function getPointColor(val: number, dataType: string, customColor?: string): string {
+function getPointColor(val: number, dataType: string = 'aqi', customColor?: string): string {
   if (customColor) return customColor;
+  if (dataType === 'weather') {
+    if (val < 15) return '#3b82f6';
+    if (val < 25) return '#60a5fa';
+    if (val < 30) return '#fbbf24';
+    if (val < 35) return '#f97316';
+    return '#ef4444';
+  }
   if (dataType === 'aqi') {
     if (val > 300) return '#a855f7'; // Purple (Severe)
     if (val > 200) return '#ef4444'; // Red (Very Poor)
@@ -107,7 +114,14 @@ function getPointColor(val: number, dataType: string, customColor?: string): str
   return '#06b6d4';
 }
 
-function getAQILabel(val: number, dataType: string): string {
+function getAQILabel(val: number, dataType: string = 'aqi'): string {
+  if (dataType === 'weather') {
+    if (val < 15) return 'Cool';
+    if (val < 25) return 'Mild';
+    if (val < 30) return 'Warm';
+    if (val < 35) return 'Hot';
+    return 'Very Hot';
+  }
   if (dataType === 'aqi') {
     if (val > 300) return 'Severe';
     if (val > 200) return 'Very Poor';
@@ -260,7 +274,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({
           const d2 = (pt.latitude - lat) ** 2 + (pt.longitude - lon) ** 2;
 
           if (d2 < 0.006) {
-            exactColor = getPointColor(pt.value, dataType, pt.color);
+            exactColor = getPointColor(pt.value, dataType || 'aqi', pt.color);
             break;
           }
           const weight = 1 / (d2 ** 1.15);
@@ -273,7 +287,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({
           hex = exactColor;
         } else if (denominator > 0) {
           const val = numerator / denominator;
-          hex = getPointColor(val, dataType);
+          hex = getPointColor(val, dataType || 'aqi');
         }
 
         const red = parseInt(hex.slice(1, 3), 16) || 0;
@@ -863,7 +877,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({
 
     points.forEach((pt) => {
       const p = project(pt.longitude, pt.latitude);
-      const color = getPointColor(pt.value, dataType, pt.color);
+      const color = getPointColor(pt.value, dataType || 'aqi', pt.color);
 
       // Proportional architectural height (0.18 to 0.95 units)
       let h = 0.3;
@@ -920,7 +934,7 @@ export const IndiaMap3D: React.FC<IndiaMap3DProps> = ({
         ...pt,
         computedColor: color,
         height: h,
-        aqiCategory: getAQILabel(pt.value, dataType),
+        aqiCategory: getAQILabel(pt.value, dataType || 'aqi'),
       };
 
       pillarsGroup.add(pillarMesh);
