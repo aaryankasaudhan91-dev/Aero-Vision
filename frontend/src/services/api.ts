@@ -6,11 +6,28 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.API_BASE_URL ||
-  (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api');
+const getNormalizedApiUrl = (): string => {
+  let raw = (
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.API_BASE_URL ||
+    (import.meta.env.DEV ? 'http://localhost:8000/api' : '/api')
+  ).trim();
+
+  // Strip trailing slashes
+  raw = raw.replace(/\/+$/, '');
+
+  // If raw is empty or just "/", fallback to /api
+  if (!raw || raw === '/') return '/api';
+
+  // If user provided root host (e.g. "https://aero-vision.onrender.com"), automatically append "/api"
+  if (!raw.endsWith('/api')) {
+    return `${raw}/api`;
+  }
+  return raw;
+};
+
+const API_BASE_URL = getNormalizedApiUrl();
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

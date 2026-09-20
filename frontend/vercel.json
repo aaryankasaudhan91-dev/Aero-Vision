@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://aerovision-api.onrender.com/api/$1"
+      "destination": "https://aero-vision.onrender.com/api/$1"
     },
     {
       "source": "/((?!api/|assets/|favicon|site\\.webmanifest|robots\\.txt|sitemap\\.xml).*)",

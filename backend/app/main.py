@@ -58,15 +58,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ──
-app.include_router(aqi.router, prefix="/api/aqi", tags=["AQI"])
-app.include_router(hcho.router, prefix="/api/hcho", tags=["HCHO"])
-app.include_router(fire.router, prefix="/api/fire", tags=["Fire"])
-app.include_router(transport.router, prefix="/api/transport", tags=["Transport"])
-app.include_router(insights.router, prefix="/api/insights", tags=["Insights"])
-app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
-app.include_router(weather.router, prefix="/api/weather", tags=["Weather"])
-app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+# ── Routers (mounted with both /api and root aliases for seamless compatibility) ──
+for pfx in ["/api", ""]:
+    app.include_router(aqi.router, prefix=f"{pfx}/aqi", tags=["AQI"], include_in_schema=(pfx == "/api"))
+    app.include_router(hcho.router, prefix=f"{pfx}/hcho", tags=["HCHO"], include_in_schema=(pfx == "/api"))
+    app.include_router(fire.router, prefix=f"{pfx}/fire", tags=["Fire"], include_in_schema=(pfx == "/api"))
+    app.include_router(transport.router, prefix=f"{pfx}/transport", tags=["Transport"], include_in_schema=(pfx == "/api"))
+    app.include_router(insights.router, prefix=f"{pfx}/insights", tags=["Insights"], include_in_schema=(pfx == "/api"))
+    app.include_router(reports.router, prefix=f"{pfx}/reports", tags=["Reports"], include_in_schema=(pfx == "/api"))
+    app.include_router(weather.router, prefix=f"{pfx}/weather", tags=["Weather"], include_in_schema=(pfx == "/api"))
+    app.include_router(alerts.router, prefix=f"{pfx}/alerts", tags=["Alerts"], include_in_schema=(pfx == "/api"))
 
 
 @app.get("/")

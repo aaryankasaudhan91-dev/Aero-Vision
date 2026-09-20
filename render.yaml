@@ -17,7 +17,7 @@ services:
       - key: CORS_ORIGINS
         value: https://aero-vision.vercel.app,http://localhost:5173,http://localhost:3000
       - key: FIRMS_MAP_KEY
-        value: 63a37ffffba1e9c299fe4dd9a5e43930
+        sync: false
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
