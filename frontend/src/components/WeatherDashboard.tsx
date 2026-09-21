@@ -19,6 +19,37 @@ const variables = [
   { id: 'pbl_height', name: 'Boundary Layer Height', icon: '☁️', unit: 'm', desc: 'Planetary Boundary Layer height. Dictates the vertical mixing volume for surface pollutants.' }
 ];
 
+const getVariableBadge = (id: string, val: number) => {
+  if (val === 0) return { label: 'Awaiting Data', color: 'bg-slate-100 text-slate-600 border-slate-200' };
+  switch (id) {
+    case 'temperature_2m':
+      if (val < 18) return { label: 'Cool Ambient', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+      if (val <= 32) return { label: 'Moderate Thermal', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      if (val <= 38) return { label: 'Warm Baseline', color: 'bg-amber-50 text-amber-800 border-amber-200' };
+      return { label: 'High Heatwave', color: 'bg-rose-50 text-rose-700 border-rose-200' };
+    case 'wind_speed_10m':
+      if (val < 3) return { label: 'Light Air / Calm', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
+      if (val <= 6) return { label: 'Moderate Breeze', color: 'bg-teal-50 text-teal-700 border-teal-200' };
+      return { label: 'Strong Dispersion', color: 'bg-sky-50 text-sky-700 border-sky-200' };
+    case 'relative_humidity':
+      if (val < 35) return { label: 'Dry Continental', color: 'bg-amber-50 text-amber-800 border-amber-200' };
+      if (val <= 70) return { label: 'Optimal Moisture', color: 'bg-teal-50 text-teal-700 border-teal-200' };
+      return { label: 'High Saturation', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    case 'pbl_height':
+      if (val < 800) return { label: 'Trapped / Shallow', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+      if (val <= 1500) return { label: 'Normal Vertical Mix', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+      return { label: 'Deep Convective Mix', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    default:
+      return { label: 'Nominal', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+  }
+};
+
+const formatVariableValue = (id: string, val: number) => {
+  if (val === 0) return '—';
+  if (id === 'pbl_height') return Math.round(val).toLocaleString();
+  return val.toFixed(1);
+};
+
 export const WeatherDashboard: React.FC = () => {
   const [selectedVariable, setSelectedVariable] = useState('temperature_2m');
   const getTodayString = () => new Date().toISOString().split('T')[0];
@@ -30,6 +61,13 @@ export const WeatherDashboard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [triggering, setTriggering] = useState(false);
   const [stats, setStats] = useState({ avg: 0, min: 0, max: 0 });
+  const [allStats, setAllStats] = useState<Record<string, { avg: number; min: number; max: number }>>({
+    temperature_2m: { avg: 0, min: 0, max: 0 },
+    wind_speed_10m: { avg: 0, min: 0, max: 0 },
+    relative_humidity: { avg: 0, min: 0, max: 0 },
+    pbl_height: { avg: 0, min: 0, max: 0 },
+  });
+  const [cachedPointsByVar, setCachedPointsByVar] = useState<Record<string, any[]>>({});
   const [trendData, setTrendData] = useState<any[]>([]);
   
   const [commentary, setCommentary] = useState<string>('');
@@ -58,6 +96,34 @@ export const WeatherDashboard: React.FC = () => {
     }
   };
 
+  const computeStats = (points: any[]) => {
+    if (!points || points.length === 0) return { avg: 0, min: 0, max: 0 };
+    const vals = points
+      .map((p: any) => p.value)
+      .filter((v: any) => typeof v === 'number' && !isNaN(v));
+    if (vals.length === 0) return { avg: 0, min: 0, max: 0 };
+    const sum = vals.reduce((a: number, b: number) => a + b, 0);
+    return {
+      avg: sum / vals.length,
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+    };
+  };
+
+  const getNearestCityValue = (points: any[], lat: number, lon: number, fallback: number) => {
+    if (!points || points.length === 0) return fallback;
+    let nearest = points[0];
+    let minDist = Infinity;
+    for (const p of points) {
+      const dist = (p.latitude - lat) ** 2 + (p.longitude - lon) ** 2;
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = p;
+      }
+    }
+    return typeof nearest?.value === 'number' ? nearest.value : fallback;
+  };
+
   const loadDashboardData = async () => {
     if (forecastDays.length === 0) return;
     setLoading(true);
@@ -65,11 +131,36 @@ export const WeatherDashboard: React.FC = () => {
     const targetDate = forecastDays[selectedDateIdx];
 
     try {
-      // 1. Fetch map points for currently selected date index
-      const points = await fetchForecastForDate(targetDate, selectedVariable);
-      setMapPoints(points);
+      // 1. Concurrently fetch all 4 variables for targetDate so all 4 cards show real values
+      const [tempPts, windPts, rhPts, pblPts] = await Promise.all([
+        fetchForecastForDate(targetDate, 'temperature_2m'),
+        fetchForecastForDate(targetDate, 'wind_speed_10m'),
+        fetchForecastForDate(targetDate, 'relative_humidity'),
+        fetchForecastForDate(targetDate, 'pbl_height'),
+      ]);
 
-      // Fetch commentary
+      const newCache: Record<string, any[]> = {
+        temperature_2m: tempPts,
+        wind_speed_10m: windPts,
+        relative_humidity: rhPts,
+        pbl_height: pblPts,
+      };
+      setCachedPointsByVar(newCache);
+
+      const calculatedStats = {
+        temperature_2m: computeStats(tempPts),
+        wind_speed_10m: computeStats(windPts),
+        relative_humidity: computeStats(rhPts),
+        pbl_height: computeStats(pblPts),
+      };
+      setAllStats(calculatedStats);
+
+      const activePoints = newCache[selectedVariable] || tempPts;
+      setMapPoints(activePoints);
+      const curStats = calculatedStats[selectedVariable as keyof typeof calculatedStats] || { avg: 0, min: 0, max: 0 };
+      setStats(curStats);
+
+      // Fetch AI Commentary for active variable
       try {
         const commRes = await weatherApi.getForecastCommentary({ start_date: targetDate, variable: selectedVariable });
         setCommentary(commRes.data?.commentary || '');
@@ -82,29 +173,21 @@ export const WeatherDashboard: React.FC = () => {
         setLoadingCommentary(false);
       }
 
-      // Compute statistics
-      if (points.length > 0) {
-        const vals = points.map((p: any) => p.value);
-        const sum = vals.reduce((a: number, b: number) => a + b, 0);
-        setStats({
-          avg: sum / vals.length,
-          min: Math.min(...vals),
-          max: Math.max(...vals)
-        });
-      } else {
-        setStats({ avg: 0, min: 0, max: 0 });
-      }
-
       // 2. Fetch all 7 days in parallel to generate the 7-day trend lines for key cities
       const allDaysForecasts = await Promise.all(
         forecastDays.map(d => fetchForecastForDate(d, selectedVariable))
       );
 
+      const fallbackAvg = curStats.avg || 0;
+
       const formattedTrend = forecastDays.map((d, i) => {
         const dayPoints = allDaysForecasts[i] || [];
-        const delhi = dayPoints.find((p: any) => (p.label || '').toLowerCase().includes('delhi'))?.value || (stats.avg * 1.05);
-        const mumbai = dayPoints.find((p: any) => (p.label || '').toLowerCase().includes('mumbai'))?.value || (stats.avg * 0.95);
-        const bengaluru = dayPoints.find((p: any) => (p.label || '').toLowerCase().includes('bengaluru'))?.value || (stats.avg * 0.90);
+        const dayVals = dayPoints.map((p: any) => p.value).filter((v: any) => typeof v === 'number' && !isNaN(v));
+        const dayAvg = dayVals.length > 0 ? (dayVals.reduce((a: number, b: number) => a + b, 0) / dayVals.length) : fallbackAvg;
+
+        const delhi = getNearestCityValue(dayPoints, 28.61, 77.20, dayAvg * 1.04);
+        const mumbai = getNearestCityValue(dayPoints, 19.07, 72.87, dayAvg * 0.98);
+        const bengaluru = getNearestCityValue(dayPoints, 12.97, 77.59, dayAvg * 0.92);
 
         return {
           date: d.split('-').slice(1).join('/'),
@@ -120,6 +203,16 @@ export const WeatherDashboard: React.FC = () => {
       console.error("Error loading weather details:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectVariable = (varId: string) => {
+    setSelectedVariable(varId);
+    if (cachedPointsByVar[varId] && cachedPointsByVar[varId].length > 0) {
+      setMapPoints(cachedPointsByVar[varId]);
+    }
+    if (allStats[varId]) {
+      setStats(allStats[varId]);
     }
   };
 
@@ -178,35 +271,71 @@ export const WeatherDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Variables Grid */}
+      {/* 4 Interactive FourCastNet Variable Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 perspective-1000">
         {variables.map((v) => {
           const isSelected = selectedVariable === v.id;
+          const varStat = allStats[v.id] || { avg: 0, min: 0, max: 0 };
+          const badge = getVariableBadge(v.id, varStat.avg);
+          const displayVal = formatVariableValue(v.id, varStat.avg);
+
           return (
             <button
               key={v.id}
-              onClick={() => setSelectedVariable(v.id)}
+              onClick={() => handleSelectVariable(v.id)}
               className={`glass-card card-3d p-5 rounded-2xl text-left border transition-all duration-300 relative overflow-hidden group cursor-pointer ${
                 isSelected
-                  ? 'border-sky-500 bg-sky-50/50 shadow-sm ring-2 ring-sky-200/50'
-                  : 'border-slate-200 hover:border-slate-300 bg-white'
+                  ? 'border-sky-500 bg-sky-50/60 shadow-md ring-2 ring-sky-300/60 scale-[1.01]'
+                  : 'border-slate-200 hover:border-slate-300 hover:shadow-xs bg-white'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl p-2 bg-slate-100/90 rounded-xl group-hover:scale-105 transition-transform duration-200">
-                  {v.icon}
-                </span>
-                <div>
-                  <span className="text-[10px] text-slate-500 block font-heading uppercase font-bold tracking-wider">
-                    FourCastNet
+              {/* Card Header: Icon, Subtitle, and Selection Badge */}
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl p-2 bg-slate-100/90 rounded-xl group-hover:scale-105 transition-transform duration-200 shadow-2xs">
+                    {v.icon}
                   </span>
-                  <span className="text-sm font-bold text-slate-900 mt-0.5 block font-heading">
-                    {v.name}
+                  <div>
+                    <span className="text-[10px] text-slate-500 block font-heading uppercase font-bold tracking-wider">
+                      FourCastNet
+                    </span>
+                    <span className="text-sm font-bold text-slate-900 mt-0.5 block font-heading">
+                      {v.name}
+                    </span>
+                  </div>
+                </div>
+                {isSelected ? (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold bg-sky-600 text-white shadow-2xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    Active
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500 group-hover:bg-slate-200 transition-colors">
+                    Click to View
+                  </span>
+                )}
+              </div>
+
+              {/* Main Metric Value */}
+              <div className="mt-4 flex items-baseline justify-between">
+                <div className="flex items-baseline">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 font-heading tracking-tight">
+                    {displayVal}
+                  </span>
+                  <span className="text-sm font-mono font-semibold text-slate-500 ml-1.5">
+                    {v.unit}
                   </span>
                 </div>
+                <span className={`text-[11px] px-2 py-0.5 rounded-md font-semibold border ${badge.color}`}>
+                  {badge.label}
+                </span>
               </div>
-              <div className="absolute right-4 bottom-4 text-xs font-mono font-semibold text-slate-500">
-                {v.unit}
+
+              {/* Min/Max Nationwide Spread & Dispersion summary */}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                <span>Min: <strong className="text-slate-700">{varStat.min !== 0 ? (v.id === 'pbl_height' ? Math.round(varStat.min).toLocaleString() : varStat.min.toFixed(1)) : '—'}{v.unit}</strong></span>
+                <span className="text-slate-300">•</span>
+                <span>Max: <strong className="text-slate-700">{varStat.max !== 0 ? (v.id === 'pbl_height' ? Math.round(varStat.max).toLocaleString() : varStat.max.toFixed(1)) : '—'}{v.unit}</strong></span>
               </div>
             </button>
           );

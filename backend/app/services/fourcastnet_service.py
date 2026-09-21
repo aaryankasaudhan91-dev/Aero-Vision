@@ -133,6 +133,28 @@ class FourCastNetService:
                 dir_label = directions[round(((deg % 360) / 45)) % 8]
                 label += f" ({dir_label} @ {round(deg, 1)}°)"
 
+            temp_c = r.get("temperature_2m")
+            if temp_c is not None and temp_c > 150:
+                temp_c = temp_c - 273.15
+            if temp_c is not None:
+                temp_c = round(temp_c, 2)
+
+            ws = r.get("wind_speed_10m")
+            if ws is not None:
+                ws = round(ws, 2)
+
+            rh = r.get("relative_humidity")
+            if rh is not None:
+                rh = round(rh, 2)
+
+            pbl = r.get("pbl_height")
+            if pbl is not None:
+                pbl = round(pbl, 1)
+
+            sp = r.get("surface_pressure")
+            if sp is not None:
+                sp = round(sp, 1)
+
             formatted_points.append({
                 "latitude": lat,
                 "longitude": lon,
@@ -141,7 +163,12 @@ class FourCastNetService:
                 "state": "FourCastNet AI Grid",
                 "color": color,
                 "wind_direction": r.get("wind_direction"),
-                "wind_speed": r.get("wind_speed_10m")
+                "wind_speed": ws if ws is not None else r.get("wind_speed_10m"),
+                "temperature_2m": temp_c,
+                "wind_speed_10m": ws,
+                "relative_humidity": rh,
+                "pbl_height": pbl,
+                "surface_pressure": sp,
             })
             
         return formatted_points
