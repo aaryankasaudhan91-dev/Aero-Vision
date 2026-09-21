@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.config import get_settings
-from app.routers import aqi, hcho, fire, transport, insights, reports, weather, alerts
+from app.routers import aqi, hcho, fire, transport, insights, reports, weather, alerts, keepalive
+from app.services.keep_alive_service import keep_alive_service
 
 settings = get_settings()
 
@@ -20,7 +21,14 @@ async def lifespan(app: FastAPI):
     logger.info("🛰️  Project AeroVision API starting...")
     logger.info(f"   Environment: {settings.APP_ENV}")
     logger.info(f"   CORS Origins: {settings.cors_origins_list}")
+
+    # Launch automated free keep-alive workaround (prevents 15-min free tier inactivity sleep)
+    keep_alive_service.start()
+
     yield
+
+    # Graceful shutdown of background keep-alive worker
+    await keep_alive_service.stop()
     logger.info("🛰️  Project AeroVision API shutting down.")
 
 
@@ -68,13 +76,19 @@ for pfx in ["/api", ""]:
     app.include_router(reports.router, prefix=f"{pfx}/reports", tags=["Reports"], include_in_schema=(pfx == "/api"))
     app.include_router(weather.router, prefix=f"{pfx}/weather", tags=["Weather"], include_in_schema=(pfx == "/api"))
     app.include_router(alerts.router, prefix=f"{pfx}/alerts", tags=["Alerts"], include_in_schema=(pfx == "/api"))
+    app.include_router(keepalive.router, prefix=f"{pfx}/keepalive", tags=["KeepAlive"], include_in_schema=(pfx == "/api"))
 
 
 @app.get("/")
 @app.get("/health")
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "project": "AeroVision", "version": "1.2.1"}
+    return {
+        "status": "healthy",
+        "project": "AeroVision",
+        "version": "1.2.1",
+        "keepalive": keep_alive_service.get_status(),
+    }
 
 
 if __name__ == "__main__":

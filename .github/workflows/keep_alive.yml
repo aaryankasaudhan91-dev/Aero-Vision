@@ -1,0 +1,51 @@
+name: Free Tier Automated Keep-Alive Workaround
+
+# Prevents Render free-tier web service from sleeping after 15 minutes of inactivity.
+# Runs every 14 minutes to ensure the service remains permanently warm and active 24/7.
+
+on:
+  schedule:
+    # Runs every 14 minutes (safely under Render's 15-minute inactivity limit)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI anytime
+
+jobs:
+  keep-alive:
+    name: Ping AeroVision Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping Live Health Endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::warning::BACKEND_URL secret is not set in GitHub repository secrets (Settings > Secrets and variables > Actions)."
+            exit 0
+          fi
+
+          TARGET_URL="${BACKEND_URL%/}/api/health"
+          echo "🛰️ Pinging AeroVision Backend keep-alive endpoint..."
+          
+          HTTP_RESPONSE=$(curl -s -S -L \
+            --connect-timeout 30 \
+            --max-time 60 \
+            -A "AeroVision-KeepAlive/1.0" \
+            -o /dev/null \
+            -w "%{http_code}:%{time_total}" \
+            "$TARGET_URL" || echo "FAILED:0")
+          
+          STATUS=$(echo "$HTTP_RESPONSE" | cut -d':' -f1)
+          LATENCY=$(echo "$HTTP_RESPONSE" | cut -d':' -f2)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ Keep-Alive successful! HTTP Status: $STATUS (took ${LATENCY}s). Backend is warm and awake."
+          elif [ "$STATUS" = "FAILED" ]; then
+            echo "⚠️ First ping attempt timed out or failed. Retrying in 10 seconds to wake up cold container..."
+            sleep 10
+            RETRY_CODE=$(curl -s -S -L --connect-timeout 45 --max-time 90 -A "AeroVision-KeepAlive/1.0" -o /dev/null -w "%{http_code}" "$TARGET_URL" || echo "000")
+            echo "🔄 Retry returned HTTP Status: $RETRY_CODE"
+          else
+            echo "ℹ️ Backend responded with HTTP Status: $STATUS (took ${LATENCY}s)."
+          fi

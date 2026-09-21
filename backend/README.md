@@ -122,3 +122,21 @@ NVIDIA_API_KEY=your-nvidia-fourcastnet-api-key
 - **Fire Correlation:** The `fire_service.py` maps NASA FIRMS fire radiative power (FRP) points against AQI/HCHO data to compute dynamic Pearson correlation coefficients for the Health Impact Warning System.
 - **Wind Vector Processing:** ECMWF ERA5 NetCDF files (`.nc`) are processed using `xarray` to extract u/v wind components, generating dynamic wind arrows on the frontend maps.
 - **Automated Insights:** `insights_service.py` gathers current state data from the DB, formats it as a structured prompt, and queries Google Gemini for scientific anomaly detection and safety alerts.
+
+---
+
+## ⚡ Automated Free Workaround (Preventing 10–15 min Idle Sleep)
+
+Render's free tier automatically spins down web containers after **15 minutes of inactivity** (no inbound HTTP requests), resulting in 50–90 second cold-start delays and stopped background processes. AeroVision includes a **100% Free, Dual-Layer Automated Workaround**:
+
+1. **In-App Self-Pinger Background Service (`keep_alive_service.py`)**:
+   - Runs as an asynchronous worker inside FastAPI.
+   - Pings `{public_url}/api/health` every **10 minutes** (configured via `KEEP_ALIVE_INTERVAL_MINUTES=10`).
+   - Automatically detects Render's public URL (`RENDER_EXTERNAL_URL` or custom `KEEP_ALIVE_URL`).
+   - Because the request routes through Render's external reverse proxy, Render registers it as external inbound HTTP traffic and resets the 15-minute idle timer before the container can sleep.
+   - Monitor live status at `GET /api/keepalive` or trigger manual pings with `POST /api/keepalive/ping`.
+
+2. **External GitHub Actions Cron Fail-Safe (`.github/workflows/keep_alive.yml`)**:
+   - Runs on a scheduled cron every **14 minutes** (`*/14 * * * *`) via GitHub Actions.
+   - Pings the live health endpoint over the public internet.
+   - Ensures that if the server ever restarts or spins down, external GitHub traffic immediately wakes it up and keeps it alive 24/7 without requiring third-party paid subscriptions.

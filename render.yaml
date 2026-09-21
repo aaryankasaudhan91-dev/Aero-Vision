@@ -16,6 +16,10 @@ services:
         value: 0.0.0.0
       - key: CORS_ORIGINS
         value: https://aero-vision.vercel.app,http://localhost:5173,http://localhost:3000
+      - key: KEEP_ALIVE_ENABLED
+        value: "true"
+      - key: KEEP_ALIVE_INTERVAL_MINUTES
+        value: "10"
       - key: FIRMS_MAP_KEY
         sync: false
       - key: SUPABASE_URL

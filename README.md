@@ -352,6 +352,9 @@ The UI is built on the **Atmospheric Intelligence** design system generated via 
 | `NASA_FIRMS_API_KEY` | NASA FIRMS active fire API key |
 | `APP_ENV` | `development` or `production` |
 | `CORS_ORIGINS` | Comma-separated list of allowed frontend origins |
+| `KEEP_ALIVE_ENABLED` | Enable automated free keep-alive workaround (`true`/`false`) |
+| `KEEP_ALIVE_INTERVAL_MINUTES` | Keep-alive ping frequency in minutes (default: `10`) |
+| `KEEP_ALIVE_URL` | Public endpoint URL to ping (defaults to `RENDER_EXTERNAL_URL`) |
 
 ### Frontend (`frontend/.env`)
 
