@@ -446,9 +446,9 @@ export const HchoDashboard: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex-1 h-[460px]">
+            <div className="flex-1 h-[460px] min-h-[300px] min-w-0">
               {trends && trends.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={200}>
                   <LineChart data={trends} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />

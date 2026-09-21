@@ -521,9 +521,9 @@ export const HealthDashboard: React.FC = () => {
             Ground CPCB CAAQMS Ingestion
           </div>
         </div>
-        <div className="h-60 w-full">
+        <div className="h-60 w-full min-h-[240px] min-w-0">
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={240} minWidth={100} minHeight={150}>
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="riskLightGrad" x1="0" y1="0" x2="0" y2="1">

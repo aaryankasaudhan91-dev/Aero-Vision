@@ -180,9 +180,9 @@ export const PollutantDashboard: React.FC = () => {
               <span className="text-[10px] font-mono text-slate-500">Highest Values</span>
             </div>
 
-            <div className="flex-1 h-[440px]">
+            <div className="flex-1 h-[440px] min-h-[300px] min-w-0">
               {ranking && ranking.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={200}>
                   <BarChart data={ranking} layout="vertical" margin={{ left: 10, right: 20, top: 10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis type="number" stroke="#94a3b8" fontSize={10} tickLine={false} />

@@ -48,9 +48,41 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const [liveVectors, setLiveVectors] = useState<VectorPoint[]>([]);
 
-  // 1. Fetch real-time meteorological wind vectors from backend
+  // 1. Fetch real-time meteorological wind vectors from backend only when visible
   useEffect(() => {
     let isMounted = true;
+
+    // Do not initiate network requests if overlay is toggled off
+    if (!visible) return;
+
+    // If caller provided points with wind fields, map them directly without additional network request
+    if (points && points.length > 0) {
+      const hasWind = points.some(p => p.wind_speed !== undefined || p.speed !== undefined || p.u !== undefined);
+      if (hasWind) {
+        const mapped: VectorPoint[] = points
+          .filter(p => (p.latitude ?? p.lat) && (p.longitude ?? p.lon))
+          .map((item: any) => {
+            const lat = item.lat ?? item.latitude;
+            const lon = item.lon ?? item.longitude;
+            const dir = item.wind_direction ?? item.direction ?? 0;
+            const spd = item.wind_speed ?? item.speed ?? 3.5;
+            const u = item.u ?? -Math.sin((dir * Math.PI) / 180) * spd;
+            const v = item.v ?? -Math.cos((dir * Math.PI) / 180) * spd;
+            return {
+              lat,
+              lon,
+              u,
+              v,
+              speed: spd,
+              direction: dir,
+            };
+          });
+        if (mapped.length > 0) {
+          setLiveVectors(mapped);
+          return;
+        }
+      }
+    }
 
     const fetchRealTimeWind = async () => {
       try {
@@ -75,7 +107,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
 
     // Re-fetch on global auto-refresh trigger
     const onRefresh = () => {
-      fetchRealTimeWind();
+      if (visible) fetchRealTimeWind();
     };
     window.addEventListener('refresh-active-dashboard', onRefresh);
 
@@ -83,7 +115,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       isMounted = false;
       window.removeEventListener('refresh-active-dashboard', onRefresh);
     };
-  }, []);
+  }, [visible, points]);
 
   useEffect(() => {
     if (!visible) {

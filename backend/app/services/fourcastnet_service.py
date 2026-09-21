@@ -2,8 +2,10 @@
 
 import os
 import aiohttp
+import asyncio
+import time
 from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from app.database import supabase
 from app.config import get_settings
 from loguru import logger
@@ -14,6 +16,8 @@ class FourCastNetService:
     """Service to request, simulate, and retrieve FourCastNet weather forecasts."""
 
     BASE_URL = "https://ai.api.nvidia.com/v1/physics/nvidia/fourcastnet"
+    _cache: Dict[str, Tuple[float, List[Dict[str, Any]]]] = {}
+    CACHE_TTL = 900.0  # 15 minutes in-memory cache
 
     async def trigger_forecast(self, start_date_str: str) -> Dict[str, Any]:
         """Trigger a 7-day weather forecast run using FourCastNet."""
@@ -54,33 +58,49 @@ class FourCastNetService:
             logger.error(f"NVIDIA FourCastNet NIM API call failed: {e}")
             return {"status": "error", "message": f"NVIDIA API call failed: {e}"}
 
+    async def _get_raw_records(self, target_date_str: str) -> List[Dict[str, Any]]:
+        """Fetch raw gridded records with non-blocking threads and 15-minute in-memory caching."""
+        now = time.time()
+        if target_date_str in self._cache:
+            ts, cached_data = self._cache[target_date_str]
+            if now - ts < self.CACHE_TTL and cached_data:
+                return cached_data
+
+        def fetch_exists():
+            return supabase.table("meteorological_data").select("id").eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1).execute().data or []
+
+        exists = await asyncio.to_thread(fetch_exists)
+        if not exists:
+            logger.info(f"No forecast found for {target_date_str}. Attempting dynamic trigger...")
+            await self.trigger_forecast(target_date_str)
+
+        def fetch_exact():
+            return supabase.table("meteorological_data").select(
+                "latitude, longitude, temperature_2m, relative_humidity, wind_speed_10m, wind_direction, pbl_height, surface_pressure"
+            ).eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1000).execute().data or []
+
+        data = await asyncio.to_thread(fetch_exact)
+
+        if not data:
+            logger.info(f"Falling back to nearest available meteorological baseline for {target_date_str}...")
+            def fetch_latest():
+                latest_res = supabase.table("meteorological_data").select("observed_date").eq("source", "FourCastNet").order("observed_date", desc=True).limit(1).execute()
+                if latest_res.data:
+                    fallback_date = latest_res.data[0]["observed_date"]
+                    return supabase.table("meteorological_data").select(
+                        "latitude, longitude, temperature_2m, relative_humidity, wind_speed_10m, wind_direction, pbl_height, surface_pressure"
+                    ).eq("source", "FourCastNet").eq("observed_date", fallback_date).limit(1000).execute().data or []
+                return []
+
+            data = await asyncio.to_thread(fetch_latest)
+
+        self._cache[target_date_str] = (now, data)
+        return data
+
     async def get_forecast(self, target_date_str: str, variable: str = "temperature_2m") -> List[Dict[str, Any]]:
         """Retrieve the gridded weather forecast from FourCastNet for a specific date and format for 3D Map."""
         logger.info(f"Retrieving FourCastNet forecast for {target_date_str}, variable: {variable}")
-        
-        # Check if forecast records exist. If not, try to trigger a forecast run dynamically
-        res = supabase.table("meteorological_data").select("id").eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1).execute()
-        if not res.data:
-            logger.info(f"No forecast found for {target_date_str}. Generating dynamic 7-day forecast...")
-            await self.trigger_forecast(target_date_str)
-
-        # Query gridded forecast records for the target date
-        met_res = supabase.table("meteorological_data").select(
-            "latitude, longitude, temperature_2m, relative_humidity, wind_speed_10m, wind_direction, pbl_height, surface_pressure"
-        ).eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1000).execute()
-        
-        data = met_res.data or []
-
-        # If still empty for this future/historical date, fallback to the latest available FourCastNet or ERA5 baseline
-        if not data:
-            logger.info(f"No exact forecast records found for {target_date_str}. Falling back to nearest meteorological baseline...")
-            latest_res = supabase.table("meteorological_data").select("observed_date").eq("source", "FourCastNet").order("observed_date", desc=True).limit(1).execute()
-            if latest_res.data:
-                fallback_date = latest_res.data[0]["observed_date"]
-                met_res = supabase.table("meteorological_data").select(
-                    "latitude, longitude, temperature_2m, relative_humidity, wind_speed_10m, wind_direction, pbl_height, surface_pressure"
-                ).eq("source", "FourCastNet").eq("observed_date", fallback_date).limit(1000).execute()
-                data = met_res.data or []
+        data = await self._get_raw_records(target_date_str)
         
         formatted_points = []
 
@@ -173,25 +193,89 @@ class FourCastNetService:
             
         return formatted_points
 
+    async def get_forecast_trends(
+        self, start_date_str: str, end_date_str: str, variable: str = "temperature_2m"
+    ) -> List[Dict[str, Any]]:
+        """Compute 7-day regional forecast trajectories for key cities and national mean in a single efficient query."""
+        logger.info(f"Retrieving forecast trends from {start_date_str} to {end_date_str} for {variable}")
+
+        start = date.fromisoformat(start_date_str)
+        end = date.fromisoformat(end_date_str)
+
+        def fetch_range():
+            return (
+                supabase.table("meteorological_data")
+                .select("observed_date, latitude, longitude, temperature_2m, relative_humidity, wind_speed_10m, pbl_height, surface_pressure")
+                .eq("source", "FourCastNet")
+                .gte("observed_date", str(start))
+                .lte("observed_date", str(end))
+                .limit(5000)
+                .execute()
+            ).data or []
+
+        records = await asyncio.to_thread(fetch_range)
+
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for r in records:
+            d = str(r.get("observed_date"))
+            if d not in grouped:
+                grouped[d] = []
+            grouped[d].append(r)
+
+        cities = {
+            "Delhi": (28.61, 77.20),
+            "Mumbai": (19.07, 72.87),
+            "Bengaluru": (12.97, 77.59),
+        }
+
+        results = []
+        cur = start
+        delta = timedelta(days=1)
+
+        while cur <= end:
+            cur_str = str(cur)
+            date_pts = grouped.get(cur_str)
+            if not date_pts:
+                date_pts = await self._get_raw_records(cur_str)
+
+            def extract_val(item):
+                v = item.get(variable)
+                if variable == "temperature_2m" and v is not None and v > 150:
+                    v = v - 273.15
+                return v
+
+            valid_vals = [extract_val(p) for p in date_pts if extract_val(p) is not None]
+            day_avg = sum(valid_vals) / len(valid_vals) if valid_vals else 0.0
+
+            entry = {
+                "date": f"{cur.month:02d}/{cur.day:02d}",
+                "full_date": cur_str,
+                "Mean": round(day_avg, 1),
+            }
+
+            for city_name, (clat, clon) in cities.items():
+                if date_pts:
+                    nearest = min(date_pts, key=lambda p: (p["latitude"] - clat) ** 2 + (p["longitude"] - clon) ** 2)
+                    c_val = extract_val(nearest)
+                    entry[city_name] = round(c_val, 1) if c_val is not None else round(day_avg, 1)
+                else:
+                    entry[city_name] = round(day_avg, 1)
+
+            results.append(entry)
+            cur += delta
+
+        return results
+
     async def get_forecast_commentary(self, target_date_str: str, variable: str = "temperature_2m") -> Dict[str, Any]:
         """Generate a scientific meteorological commentary using NVIDIA NIM LLM and/or Google Gemini AI."""
         logger.info(f"Generating meteorological commentary for {target_date_str}, variable: {variable}")
-        
-        res = supabase.table("meteorological_data").select(variable).eq("source", "FourCastNet").eq("observed_date", target_date_str).limit(1000).execute()
-        data = res.data or []
-        
-        if not data:
-            # Fallback to nearest date in meteorological_data
-            latest_res = supabase.table("meteorological_data").select("observed_date").eq("source", "FourCastNet").order("observed_date", desc=True).limit(1).execute()
-            if latest_res.data:
-                fallback_date = latest_res.data[0]["observed_date"]
-                res = supabase.table("meteorological_data").select(variable).eq("source", "FourCastNet").eq("observed_date", fallback_date).limit(1000).execute()
-                data = res.data or []
-        
+
+        data = await self._get_raw_records(target_date_str)
+
         vals = [r[variable] for r in data if r.get(variable) is not None]
         if variable == "temperature_2m":
             vals = [v - 273.15 if v > 150 else v for v in vals]
-            
+
         mean_val = sum(vals) / len(vals) if vals else 28.5
         min_val = min(vals) if vals else 18.0
         max_val = max(vals) if vals else 36.5

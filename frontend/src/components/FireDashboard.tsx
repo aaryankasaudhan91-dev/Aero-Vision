@@ -228,9 +228,9 @@ export const FireDashboard: React.FC = () => {
               <span className="text-[10px] font-mono text-slate-500">Dual-Axis Covariance</span>
             </div>
 
-            <div className="flex-1 h-[440px]">
+            <div className="flex-1 h-[440px] min-h-[300px] min-w-0">
               {chartData && chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={200}>
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />

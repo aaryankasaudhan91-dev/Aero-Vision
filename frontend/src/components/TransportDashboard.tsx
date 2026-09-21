@@ -293,9 +293,9 @@ export const TransportDashboard: React.FC = () => {
                 </h3>
                 <span className="text-[10px] font-mono text-slate-500">% Contribution</span>
               </div>
-              <div className="h-[210px] mb-4">
+              <div className="h-[210px] mb-4 min-w-0">
                 {attribution && attribution.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={210} minWidth={100} minHeight={150}>
                     <BarChart data={attribution} layout="vertical" margin={{ left: 10, right: 20, top: 5, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis type="number" stroke="#94a3b8" fontSize={10} unit="%" tickLine={false} />
@@ -327,9 +327,9 @@ export const TransportDashboard: React.FC = () => {
                   </h3>
                   <span className="text-[10px] font-mono text-slate-500">Compass Octants</span>
                 </div>
-                <div className="h-[180px]">
+                <div className="h-[180px] min-w-0">
                   {radarData && radarData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={180} minWidth={100} minHeight={150}>
                       <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                         <PolarGrid stroke="#e2e8f0" />
                         <PolarAngleAxis dataKey="subject" stroke="#64748b" fontSize={9} />

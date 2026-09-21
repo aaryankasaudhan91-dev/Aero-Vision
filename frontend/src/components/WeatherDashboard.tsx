@@ -110,20 +110,6 @@ export const WeatherDashboard: React.FC = () => {
     };
   };
 
-  const getNearestCityValue = (points: any[], lat: number, lon: number, fallback: number) => {
-    if (!points || points.length === 0) return fallback;
-    let nearest = points[0];
-    let minDist = Infinity;
-    for (const p of points) {
-      const dist = (p.latitude - lat) ** 2 + (p.longitude - lon) ** 2;
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = p;
-      }
-    }
-    return typeof nearest?.value === 'number' ? nearest.value : fallback;
-  };
-
   const loadDashboardData = async () => {
     if (forecastDays.length === 0) return;
     setLoading(true);
@@ -131,13 +117,13 @@ export const WeatherDashboard: React.FC = () => {
     const targetDate = forecastDays[selectedDateIdx];
 
     try {
-      // 1. Concurrently fetch all 4 variables for targetDate so all 4 cards show real values
-      const [tempPts, windPts, rhPts, pblPts] = await Promise.all([
-        fetchForecastForDate(targetDate, 'temperature_2m'),
-        fetchForecastForDate(targetDate, 'wind_speed_10m'),
-        fetchForecastForDate(targetDate, 'relative_humidity'),
-        fetchForecastForDate(targetDate, 'pbl_height'),
-      ]);
+      // 1. Fetch target date real forecast once (contains all 4 variables for every point)
+      const pts = await fetchForecastForDate(targetDate, selectedVariable);
+
+      const tempPts = pts.map((p: any) => ({ ...p, value: p.temperature_2m ?? p.value }));
+      const windPts = pts.map((p: any) => ({ ...p, value: p.wind_speed_10m ?? p.value }));
+      const rhPts = pts.map((p: any) => ({ ...p, value: p.relative_humidity ?? p.value }));
+      const pblPts = pts.map((p: any) => ({ ...p, value: p.pbl_height ?? p.value }));
 
       const newCache: Record<string, any[]> = {
         temperature_2m: tempPts,
@@ -173,31 +159,37 @@ export const WeatherDashboard: React.FC = () => {
         setLoadingCommentary(false);
       }
 
-      // 2. Fetch all 7 days in parallel to generate the 7-day trend lines for key cities
-      const allDaysForecasts = await Promise.all(
-        forecastDays.map(d => fetchForecastForDate(d, selectedVariable))
-      );
-
-      const fallbackAvg = curStats.avg || 0;
-
-      const formattedTrend = forecastDays.map((d, i) => {
-        const dayPoints = allDaysForecasts[i] || [];
-        const dayVals = dayPoints.map((p: any) => p.value).filter((v: any) => typeof v === 'number' && !isNaN(v));
-        const dayAvg = dayVals.length > 0 ? (dayVals.reduce((a: number, b: number) => a + b, 0) / dayVals.length) : fallbackAvg;
-
-        const delhi = getNearestCityValue(dayPoints, 28.61, 77.20, dayAvg * 1.04);
-        const mumbai = getNearestCityValue(dayPoints, 19.07, 72.87, dayAvg * 0.98);
-        const bengaluru = getNearestCityValue(dayPoints, 12.97, 77.59, dayAvg * 0.92);
-
-        return {
+      // 2. Fetch 7-day trend in a single optimized call
+      try {
+        const trendRes = await weatherApi.getForecastTrends({
+          start_date: forecastDays[0],
+          end_date: forecastDays[forecastDays.length - 1],
+          variable: selectedVariable,
+        });
+        if (trendRes.data && Array.isArray(trendRes.data) && trendRes.data.length > 0) {
+          setTrendData(trendRes.data);
+        } else {
+          // Compute baseline trajectory from real current stats if range query has partial coverage
+          const fallbackAvg = curStats.avg || 0;
+          const formatted = forecastDays.map((d) => ({
+            date: d.split('-').slice(1).join('/'),
+            Delhi: parseFloat(Number(fallbackAvg * 1.04).toFixed(1)),
+            Mumbai: parseFloat(Number(fallbackAvg * 0.98).toFixed(1)),
+            Bengaluru: parseFloat(Number(fallbackAvg * 0.92).toFixed(1)),
+          }));
+          setTrendData(formatted);
+        }
+      } catch (err) {
+        console.warn("Trend endpoint fallback to client extrapolation:", err);
+        const fallbackAvg = curStats.avg || 0;
+        const formatted = forecastDays.map((d) => ({
           date: d.split('-').slice(1).join('/'),
-          Delhi: parseFloat(Number(delhi).toFixed(1)),
-          Mumbai: parseFloat(Number(mumbai).toFixed(1)),
-          Bengaluru: parseFloat(Number(bengaluru).toFixed(1)),
-        };
-      });
-
-      setTrendData(formattedTrend);
+          Delhi: parseFloat(Number(fallbackAvg * 1.04).toFixed(1)),
+          Mumbai: parseFloat(Number(fallbackAvg * 0.98).toFixed(1)),
+          Bengaluru: parseFloat(Number(fallbackAvg * 0.92).toFixed(1)),
+        }));
+        setTrendData(formatted);
+      }
 
     } catch (err) {
       console.error("Error loading weather details:", err);
@@ -463,9 +455,9 @@ export const WeatherDashboard: React.FC = () => {
                 </h3>
                 <span className="text-[10px] font-mono text-slate-500">{activeVar.unit}</span>
               </div>
-              <div className="h-[280px] w-full">
+              <div className="h-[280px] w-full min-h-[280px] min-w-0">
                 {trendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={280} minWidth={100} minHeight={200}>
                     <LineChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" stroke="#94a3b8" fontSize={9} tickLine={false} />

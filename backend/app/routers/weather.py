@@ -55,3 +55,22 @@ async def get_weather_forecast_commentary(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate commentary: {e}")
 
+
+@router.get("/forecast/trends")
+async def get_weather_forecast_trends(
+    start_date: date = Query(..., description="Start date for trends (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="End date for trends (YYYY-MM-DD)"),
+    variable: str = Query(
+        "temperature_2m",
+        enum=["temperature_2m", "relative_humidity", "wind_speed_10m", "pbl_height", "surface_pressure"],
+        description="The weather/climate variable to retrieve trends for"
+    ),
+):
+    """Retrieve 7-day regional forecast trends for Delhi, Mumbai, Bengaluru and Mean."""
+    try:
+        trends = await fourcastnet_service.get_forecast_trends(str(start_date), str(end_date), variable)
+        return trends
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch forecast trends: {e}")
+
+
