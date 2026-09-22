@@ -43,6 +43,7 @@ export const AqiDashboard: React.FC = () => {
     if (aqi <= 200) return 'aqi-moderate';
     if (aqi <= 300) return 'aqi-poor';
     if (aqi <= 400) return 'aqi-verypoor';
+    if (aqi <= 500) return 'aqi-severe';
     return 'aqi-severe';
   };
 
@@ -73,7 +74,7 @@ export const AqiDashboard: React.FC = () => {
         aqiApi.getPredictions({
           date: selectedDate,
           state: selectedState,
-        }).catch(() => {}),
+        }).catch(() => { }),
       ]);
 
       // 1. Process Overview & Stations
