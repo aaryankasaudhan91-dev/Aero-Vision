@@ -52,9 +52,11 @@ class KeepAliveService:
         if self._settings.KEEP_ALIVE_URL:
             return self._settings.KEEP_ALIVE_URL.rstrip("/")
 
-        # 2. Render auto-injected environment variable (populated automatically in cloud)
+        # 2. Render auto-injected environment variables (populated automatically in Render cloud)
         if self._settings.RENDER_EXTERNAL_URL:
             return self._settings.RENDER_EXTERNAL_URL.rstrip("/")
+        if self._settings.RENDER_EXTERNAL_HOSTNAME:
+            return f"https://{self._settings.RENDER_EXTERNAL_HOSTNAME.rstrip('/')}"
 
         # 3. Default fallback (local host port)
         return f"http://127.0.0.1:{self._settings.APP_PORT}"

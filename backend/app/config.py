@@ -47,8 +47,9 @@ class Settings(BaseSettings):
     # ── Keep-Alive (Automated Free Workaround for 10-15 min Idle Sleep) ──
     KEEP_ALIVE_ENABLED: bool = True
     KEEP_ALIVE_INTERVAL_MINUTES: int = 10  # Ping every 10 min (safely before Render's 15 min idle threshold)
-    KEEP_ALIVE_URL: str = ""              # Custom URL override (e.g. https://aero-vision.onrender.com)
+    KEEP_ALIVE_URL: str = ""              # Custom URL override 
     RENDER_EXTERNAL_URL: str = ""         # Auto-populated by Render environment if available
+    RENDER_EXTERNAL_HOSTNAME: str = ""    # Auto-populated by Render 
 
     # ── External APIs ──
     FIRMS_MAP_KEY: str = ""

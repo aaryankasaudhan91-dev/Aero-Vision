@@ -1,11 +1,11 @@
 name: Free Tier Automated Keep-Alive Workaround
 
 # Prevents Render free-tier web service from sleeping after 15 minutes of inactivity.
-# Runs every 14 minutes to ensure the service remains permanently warm and active 24/7.
+# Runs every 10 minutes to ensure the service remains permanently warm and active 24/7.
 
 on:
   schedule:
-    # Runs every 14 minutes (safely under Render's 15-minute inactivity limit)
+    # Runs every 10 minutes (safely under Render's 15-minute inactivity limit)
     - cron: '*/10 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub Actions UI anytime
 
