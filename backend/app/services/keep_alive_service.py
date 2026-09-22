@@ -48,18 +48,13 @@ class KeepAliveService:
         3. Production fallback (https://aero-vision.onrender.com)
         4. Local development fallback (http://127.0.0.1:{APP_PORT})
         """
-        # 1. Manual override from environment
+        # 1. Manual override from environment (if user explicitly wants external pinging)
         if self._settings.KEEP_ALIVE_URL:
             return self._settings.KEEP_ALIVE_URL.rstrip("/")
 
-        # 2. Render auto-injected environment variables (populated automatically in Render cloud)
-        if self._settings.RENDER_EXTERNAL_URL:
-            return self._settings.RENDER_EXTERNAL_URL.rstrip("/")
-        if self._settings.RENDER_EXTERNAL_HOSTNAME:
-            return f"https://{self._settings.RENDER_EXTERNAL_HOSTNAME.rstrip('/')}"
-
-        # 3. Default fallback (local host port)
-        return f"http://127.0.0.1:{self._settings.APP_PORT}"
+        # 2. Local loopback fallback (safe, instant, avoids Render NAT hairpin routing timeouts)
+        port = self._settings.APP_PORT
+        return f"http://127.0.0.1:{port}"
 
     def get_status(self) -> Dict[str, Any]:
         """Returns diagnostic status of the keep-alive service."""

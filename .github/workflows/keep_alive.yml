@@ -20,13 +20,9 @@ jobs:
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
-          if [ -z "$BACKEND_URL" ]; then
-            echo "::warning::BACKEND_URL secret is not set in GitHub repository secrets (Settings > Secrets and variables > Actions)."
-            exit 0
-          fi
-
-          TARGET_URL="${BACKEND_URL%/}/api/health"
-          echo "🛰️ Pinging AeroVision Backend keep-alive endpoint..."
+          TARGET_URL="${BACKEND_URL:-https://aero-vision.onrender.com}"
+          TARGET_URL="${TARGET_URL%/}/api/health"
+          echo "🛰️ Pinging AeroVision Backend keep-alive endpoint at $TARGET_URL..."
           
           HTTP_RESPONSE=$(curl -s -S -L \
             --connect-timeout 30 \
