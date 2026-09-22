@@ -85,7 +85,7 @@ export const TermsAndConditions: React.FC = () => {
             </p>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
               <p className="font-bold text-slate-950 dark:text-white text-sm">Project AeroVision — Student Research Project</p>
-              <p>Lead Developer: <strong>Aaryan Kasaudhan</strong></p>
+              <p>Lead Developers: <strong>Aaryan Kasaudhan, Jitendra Choudhary, Akshay Paswan</strong></p>
               <p>
                 Email: <a href="mailto:aaryankasaudhan91@gmail.com" className="text-purple-600 dark:text-purple-400 font-semibold hover:underline">aaryankasaudhan91@gmail.com</a>
               </p>
