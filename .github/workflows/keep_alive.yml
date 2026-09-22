@@ -6,7 +6,7 @@ name: Free Tier Automated Keep-Alive Workaround
 on:
   schedule:
     # Runs every 14 minutes (safely under Render's 15-minute inactivity limit)
-    - cron: '*/14 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub Actions UI anytime
 
 jobs:
