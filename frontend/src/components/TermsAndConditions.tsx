@@ -27,7 +27,7 @@ export const TermsAndConditions: React.FC = () => {
             <strong className="font-bold block text-amber-950 dark:text-amber-100 text-sm mb-0.5">
               Academic Student Project Disclaimer
             </strong>
-            Project AeroVision is an independent, non-commercial student research project developed by <strong>Aaryan Kasaudhan</strong> for academic learning, environmental data exploration, and machine learning research demonstration. The values, predictions, and hotspots displayed are intended strictly for educational and scientific research purposes, and do not constitute official statutory directives or emergency declarations from national disaster management agencies.
+            Project AeroVision is an independent, non-commercial student research project developed by <strong>Aaryan Kasaudhan & its team</strong> for academic learning, environmental data exploration, and machine learning research demonstration. The values, predictions, and hotspots displayed are intended strictly for educational and scientific research purposes, and do not constitute official statutory directives or emergency declarations from national disaster management agencies.
           </div>
         </div>
 
