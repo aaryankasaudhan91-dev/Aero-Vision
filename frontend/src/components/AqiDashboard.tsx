@@ -49,25 +49,44 @@ export const AqiDashboard: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Get Overview Metrics from live backend API
-      const overviewRes = await aqiApi.getOverview({
-        date: selectedDate,
-        state: selectedState,
-        city: selectedCity,
-      });
+      const start = new Date(selectedDate);
+      start.setDate(start.getDate() - 7);
 
-      if (overviewRes?.data && typeof overviewRes.data === 'object') {
+      // Execute all dashboard queries in parallel rather than sequential waterfall
+      const [overviewResult, stationsResult, trendsResult] = await Promise.allSettled([
+        aqiApi.getOverview({
+          date: selectedDate,
+          state: selectedState,
+          city: selectedCity,
+        }),
+        aqiApi.getStations({
+          state: selectedState,
+          is_active: true,
+        }),
+        aqiApi.getTrends({
+          start_date: start.toISOString().split('T')[0],
+          end_date: selectedDate,
+          state: selectedState,
+          city: selectedCity,
+        }),
+        // Trigger background prediction run asynchronously
+        aqiApi.getPredictions({
+          date: selectedDate,
+          state: selectedState,
+        }).catch(() => {}),
+      ]);
+
+      // 1. Process Overview & Stations
+      if (overviewResult.status === 'fulfilled' && overviewResult.value?.data) {
+        const data = overviewResult.value.data;
         setMetrics({
-          avg_aqi: overviewRes.data.avg_aqi || 0,
-          max_aqi: overviewRes.data.max_aqi || 0,
-          min_aqi: overviewRes.data.min_aqi || 0,
-          category: overviewRes.data.aqi_category || 'N/A',
+          avg_aqi: data.avg_aqi || 0,
+          max_aqi: data.max_aqi || 0,
+          min_aqi: data.min_aqi || 0,
+          category: data.aqi_category || 'N/A',
         });
 
-        // Map real observations to flat station structure for Map and Cards
-        const obsList = Array.isArray(overviewRes.data.observations)
-          ? overviewRes.data.observations
-          : [];
+        const obsList = Array.isArray(data.observations) ? data.observations : [];
         const mappedStations = obsList.map((o: any) => ({
           station_id: o.station_id,
           station_name: o.cpcb_stations?.station_name || 'Unknown',
@@ -78,35 +97,23 @@ export const AqiDashboard: React.FC = () => {
           aqi: o.aqi,
         }));
         setStations(mappedStations);
+      } else if (overviewResult.status === 'rejected') {
+        console.warn('AQI overview fetch error:', overviewResult.reason);
       }
 
-      // 2. Fetch list of unique cities for the selected state to populate dropdown
-      const stationsRes = await aqiApi.getStations({
-        state: selectedState,
-        is_active: true,
-      });
-      const rawStations = Array.isArray(stationsRes?.data) ? stationsRes.data : [];
-      const uniqueCities = Array.from(
-        new Set(rawStations.map((s: any) => s.city).filter(Boolean))
-      ) as string[];
-      setCitiesList(uniqueCities);
+      // 2. Process Cities list from Stations
+      if (stationsResult.status === 'fulfilled' && stationsResult.value?.data) {
+        const rawStations = Array.isArray(stationsResult.value.data) ? stationsResult.value.data : [];
+        const uniqueCities = Array.from(
+          new Set(rawStations.map((s: any) => s.city).filter(Boolean))
+        ) as string[];
+        setCitiesList(uniqueCities);
+      }
 
-      // 3. Get Real Historical Trends
-      const start = new Date(selectedDate);
-      start.setDate(start.getDate() - 7);
-      const trendsRes = await aqiApi.getTrends({
-        start_date: start.toISOString().split('T')[0],
-        end_date: selectedDate,
-        state: selectedState,
-        city: selectedCity,
-      });
-      setTrends(Array.isArray(trendsRes?.data) ? trendsRes.data : []);
-
-      // 4. Trigger Real Predictions
-      await aqiApi.getPredictions({
-        date: selectedDate,
-        state: selectedState,
-      });
+      // 3. Process Historical Trends
+      if (trendsResult.status === 'fulfilled' && trendsResult.value?.data) {
+        setTrends(Array.isArray(trendsResult.value.data) ? trendsResult.value.data : []);
+      }
 
     } catch (err: any) {
       console.error("Error fetching live AQI dashboard data:", err);
