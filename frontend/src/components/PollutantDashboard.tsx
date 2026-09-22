@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import IndiaMap from './IndiaMap';
 import {
   BarChart,
@@ -29,6 +29,24 @@ export const PollutantDashboard: React.FC = () => {
 
   const [dataList, setDataList] = useState<any[]>([]);
   const [ranking, setRanking] = useState<any[]>([]);
+
+  const mapPoints = useMemo(() => {
+    return dataList
+      .map((item: any) => {
+        const lat = item.cpcb_stations?.latitude;
+        const lon = item.cpcb_stations?.longitude;
+        if (!lat || !lon) return null;
+        const k = selectedPollutant.toLowerCase().replace('.', '');
+        return {
+          latitude: lat,
+          longitude: lon,
+          value: parseFloat(item[k]) || 0,
+          label: item.cpcb_stations?.station_name || 'Station',
+          state: item.cpcb_stations?.state || '',
+        };
+      })
+      .filter(Boolean) as any[];
+  }, [dataList, selectedPollutant]);
 
   // Standards (CPCB NAQI 24-hr limit)
   const standards: Record<string, number> = {
@@ -149,21 +167,7 @@ export const PollutantDashboard: React.FC = () => {
 
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
-              points={dataList
-                .map((item: any) => {
-                  const lat = item.cpcb_stations?.latitude;
-                  const lon = item.cpcb_stations?.longitude;
-                  if (!lat || !lon) return null;
-                  const k = selectedPollutant.toLowerCase().replace('.', '');
-                  return {
-                    latitude: lat,
-                    longitude: lon,
-                    value: parseFloat(item[k]) || 0,
-                    label: item.cpcb_stations?.station_name || 'Station',
-                    state: item.cpcb_stations?.state || '',
-                  };
-                })
-                .filter(Boolean) as any[]}
+              points={mapPoints}
               dataType="pollutant"
               pollutantName={selectedPollutant}
             />

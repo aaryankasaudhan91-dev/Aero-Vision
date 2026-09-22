@@ -456,14 +456,7 @@ export const HealthDashboard: React.FC = () => {
           </div>
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
-              points={computedPoints.map((pt) => ({
-                latitude: pt.latitude,
-                longitude: pt.longitude,
-                value: pt.value,
-                label: pt.label,
-                state: pt.state,
-                color: pt.color,
-              }))}
+              points={computedPoints}
               dataType="pollutant"
               variableName="Health Risk Index"
               unit="Score"

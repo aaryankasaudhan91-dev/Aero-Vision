@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import IndiaMap from './IndiaMap';
 import {
   LineChart,
@@ -57,6 +57,24 @@ export const HchoDashboard: React.FC = () => {
   });
   const [hotspots, setHotspots] = useState<any[]>([]);
   const [trends, setTrends] = useState<any[]>([]);
+
+  const mapPoints = useMemo(() => {
+    return hotspots
+      .map((hot: any) => {
+        const lat = hot.centroid_lat ?? hot.latitude;
+        const lon = hot.centroid_lon ?? hot.longitude;
+        if (!lat || !lon) return null;
+        const rawVal = hot.mean_hcho ?? hot.peak_hcho ?? hot.column_value ?? 0;
+        return {
+          latitude: Number(lat),
+          longitude: Number(lon),
+          value: Number(rawVal) * 1e5,
+          label: hot.region_name || 'Hotspot Zone',
+          state: hot.state || '',
+        };
+      })
+      .filter(Boolean) as any[];
+  }, [hotspots]);
 
   const pollTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
@@ -409,21 +427,7 @@ export const HchoDashboard: React.FC = () => {
 
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
-              points={hotspots
-                .map((hot: any) => {
-                  const lat = hot.centroid_lat ?? hot.latitude;
-                  const lon = hot.centroid_lon ?? hot.longitude;
-                  if (!lat || !lon) return null;
-                  const rawVal = hot.mean_hcho ?? hot.peak_hcho ?? hot.column_value ?? 0;
-                  return {
-                    latitude: Number(lat),
-                    longitude: Number(lon),
-                    value: Number(rawVal) * 1e5,
-                    label: hot.region_name || 'Hotspot Zone',
-                    state: hot.state || '',
-                  };
-                })
-                .filter(Boolean) as any[]}
+              points={mapPoints}
               dataType="hcho"
               variableName="HCHO Density"
               unit="× 10⁻⁵ mol/m²"

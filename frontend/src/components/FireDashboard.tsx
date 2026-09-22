@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import IndiaMap from './IndiaMap';
 import {
   XAxis,
@@ -31,6 +31,23 @@ export const FireDashboard: React.FC = () => {
   });
   const [fires, setFires] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
+
+  const mapPoints = useMemo(() => {
+    return fires
+      .map((fire: any) => {
+        const lat = fire.latitude;
+        const lon = fire.longitude;
+        if (!lat || !lon) return null;
+        return {
+          latitude: lat,
+          longitude: lon,
+          value: fire.frp || 0,
+          label: `Active Fire (${fire.source})`,
+          state: fire.state || 'N/A',
+        };
+      })
+      .filter(Boolean) as any[];
+  }, [fires]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -199,20 +216,7 @@ export const FireDashboard: React.FC = () => {
 
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
-              points={fires
-                .map((fire: any) => {
-                  const lat = fire.latitude;
-                  const lon = fire.longitude;
-                  if (!lat || !lon) return null;
-                  return {
-                    latitude: lat,
-                    longitude: lon,
-                    value: fire.frp || 0,
-                    label: `Active Fire (${fire.source})`,
-                    state: fire.state || 'N/A',
-                  };
-                })
-                .filter(Boolean) as any[]}
+              points={mapPoints}
               dataType="fire"
             />
           </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import IndiaMap from './IndiaMap';
 import {
   AreaChart,
@@ -36,6 +36,16 @@ export const AqiDashboard: React.FC = () => {
   });
   const [stations, setStations] = useState<any[]>([]);
   const [trends, setTrends] = useState<any[]>([]);
+
+  const mapPoints = useMemo(() => {
+    return stations.map((stn) => ({
+      latitude: stn.latitude,
+      longitude: stn.longitude,
+      value: stn.aqi || 0,
+      label: stn.station_name,
+      state: stn.state || '',
+    }));
+  }, [stations]);
 
   const getAqiClass = (aqi: number) => {
     if (aqi <= 50) return 'aqi-good';
@@ -282,13 +292,7 @@ export const AqiDashboard: React.FC = () => {
 
           <div className="flex-1 rounded-xl overflow-hidden relative border border-slate-100">
             <IndiaMap
-              points={stations.map((stn) => ({
-                latitude: stn.latitude,
-                longitude: stn.longitude,
-                value: stn.aqi || 0,
-                label: stn.station_name,
-                state: stn.state || '',
-              }))}
+              points={mapPoints}
               dataType="aqi"
             />
           </div>

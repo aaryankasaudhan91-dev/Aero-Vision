@@ -39,6 +39,12 @@ interface VectorPoint {
   direction: number;
 }
 
+// Module-level cache to share wind vector telemetry across components, mounts, and page transitions
+let cachedWindVectors: VectorPoint[] | null = null;
+let inflightWindPromise: Promise<VectorPoint[]> | null = null;
+let lastWindFetchTime = 0;
+const WIND_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
 export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
   points = [],
   visible = true,
@@ -46,68 +52,108 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
   const map = useMap();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
-  const [liveVectors, setLiveVectors] = useState<VectorPoint[]>([]);
+  const [liveVectors, setLiveVectors] = useState<VectorPoint[]>(cachedWindVectors || []);
+  const hasFetchedRef = useRef(false);
 
-  // 1. Fetch real-time meteorological wind vectors from backend only when visible
+  // Check if caller already provided valid wind vectors embedded in props
+  const propVectors = React.useMemo(() => {
+    if (!points || points.length === 0) return [];
+    const hasWind = points.some(p => p.wind_speed !== undefined || p.speed !== undefined || p.u !== undefined);
+    if (!hasWind) return [];
+    return points
+      .filter(p => (p.latitude ?? p.lat) && (p.longitude ?? p.lon))
+      .map((item: any) => {
+        const lat = item.lat ?? item.latitude;
+        const lon = item.lon ?? item.longitude;
+        const dir = item.wind_direction ?? item.direction ?? 0;
+        const spd = item.wind_speed ?? item.speed ?? 3.5;
+        const u = item.u ?? -Math.sin((dir * Math.PI) / 180) * spd;
+        const v = item.v ?? -Math.cos((dir * Math.PI) / 180) * spd;
+        return {
+          lat,
+          lon,
+          u,
+          v,
+          speed: spd,
+          direction: dir,
+        };
+      });
+  }, [points]);
+
+  // 1. Fetch real-time meteorological wind vectors once from backend only when visible and not provided in props
   useEffect(() => {
     let isMounted = true;
 
     // Do not initiate network requests if overlay is toggled off
     if (!visible) return;
 
-    // If caller provided points with wind fields, map them directly without additional network request
-    if (points && points.length > 0) {
-      const hasWind = points.some(p => p.wind_speed !== undefined || p.speed !== undefined || p.u !== undefined);
-      if (hasWind) {
-        const mapped: VectorPoint[] = points
-          .filter(p => (p.latitude ?? p.lat) && (p.longitude ?? p.lon))
-          .map((item: any) => {
-            const lat = item.lat ?? item.latitude;
-            const lon = item.lon ?? item.longitude;
-            const dir = item.wind_direction ?? item.direction ?? 0;
-            const spd = item.wind_speed ?? item.speed ?? 3.5;
-            const u = item.u ?? -Math.sin((dir * Math.PI) / 180) * spd;
-            const v = item.v ?? -Math.cos((dir * Math.PI) / 180) * spd;
-            return {
-              lat,
-              lon,
-              u,
-              v,
-              speed: spd,
-              direction: dir,
-            };
-          });
-        if (mapped.length > 0) {
-          setLiveVectors(mapped);
-          return;
-        }
-      }
+    // If caller provided points with wind fields, use them directly without network calls
+    if (propVectors.length > 0) {
+      return;
+    }
+
+    // If cache is fresh, hydrate immediately without network request
+    if (cachedWindVectors && (Date.now() - lastWindFetchTime < WIND_CACHE_TTL_MS)) {
+      setLiveVectors(cachedWindVectors);
+      return;
+    }
+
+    // Guard against duplicate concurrent or repeated network requests in this component instance
+    if (hasFetchedRef.current) {
+      return;
     }
 
     const fetchRealTimeWind = async () => {
+      hasFetchedRef.current = true;
       try {
-        const res = await transportApi.getWindVectors();
-        if (isMounted && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped: VectorPoint[] = res.data.map((item: any) => ({
-            lat: item.lat ?? item.latitude,
-            lon: item.lon ?? item.longitude,
-            u: item.u ?? -Math.sin(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
-            v: item.v ?? -Math.cos(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
-            speed: item.speed ?? Math.sqrt((item.u ?? 0) ** 2 + (item.v ?? 0) ** 2),
-            direction: item.direction ?? ((Math.atan2(-(item.u ?? 0), -(item.v ?? 0)) * 180) / Math.PI + 360) % 360,
-          }));
-          setLiveVectors(mapped);
+        if (!inflightWindPromise) {
+          inflightWindPromise = transportApi.getWindVectors()
+            .then(res => {
+              if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+                const mapped: VectorPoint[] = res.data.map((item: any) => ({
+                  lat: item.lat ?? item.latitude,
+                  lon: item.lon ?? item.longitude,
+                  u: item.u ?? -Math.sin(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
+                  v: item.v ?? -Math.cos(((item.direction ?? 0) * Math.PI) / 180) * (item.speed ?? 3.5),
+                  speed: item.speed ?? Math.sqrt((item.u ?? 0) ** 2 + (item.v ?? 0) ** 2),
+                  direction: item.direction ?? ((Math.atan2(-(item.u ?? 0), -(item.v ?? 0)) * 180) / Math.PI + 360) % 360,
+                }));
+                cachedWindVectors = mapped;
+                lastWindFetchTime = Date.now();
+                return mapped;
+              }
+              return [];
+            })
+            .catch(err => {
+              console.warn('Real-time wind vector telemetry fallback to synoptic mode:', err);
+              // Back off for 5 minutes before retrying on failure
+              lastWindFetchTime = Date.now() - (WIND_CACHE_TTL_MS - 5 * 60 * 1000);
+              return [];
+            })
+            .finally(() => {
+              inflightWindPromise = null;
+            });
+        }
+
+        const data = await inflightWindPromise;
+        if (isMounted && data.length > 0) {
+          setLiveVectors(data);
         }
       } catch (err) {
-        console.warn('Real-time wind vector telemetry fallback to synoptic mode:', err);
+        console.warn('Wind vector handler exception:', err);
       }
     };
 
     fetchRealTimeWind();
 
-    // Re-fetch on global auto-refresh trigger
+    // Re-fetch only on explicit manual user refresh trigger
     const onRefresh = () => {
-      if (visible) fetchRealTimeWind();
+      hasFetchedRef.current = false;
+      cachedWindVectors = null;
+      lastWindFetchTime = 0;
+      if (visible && propVectors.length === 0) {
+        fetchRealTimeWind();
+      }
     };
     window.addEventListener('refresh-active-dashboard', onRefresh);
 
@@ -115,7 +161,7 @@ export const WindStreamlinesOverlay: React.FC<WindStreamlinesOverlayProps> = ({
       isMounted = false;
       window.removeEventListener('refresh-active-dashboard', onRefresh);
     };
-  }, [visible, points]);
+  }, [visible, propVectors.length]);
 
   useEffect(() => {
     if (!visible) {
