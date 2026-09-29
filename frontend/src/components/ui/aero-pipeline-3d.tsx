@@ -1,57 +1,88 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import {
+  Satellite,
+  Layers,
+  Cpu,
+  Flame,
+  FileText,
+  Activity,
+  Maximize2,
+  Minimize2,
+  Play,
+  Pause,
+  RotateCcw,
+  CheckCircle2,
+  ExternalLink,
+  Radio,
+  ArrowRight,
+  TrendingUp,
+  Workflow,
+  X,
+  Database,
+  Sparkles,
+  GitBranch,
+} from 'lucide-react'
 
-/**
- * AeroVision Pipeline — Interactive 3D Machine
- *
- * One machine you can spin that shows how AeroVision turns raw signals into
- * public-health advisories across five stations on a metal plate:
- *
- *   1. Ground Network  – 29 CPCB stations report PM2.5, PM10, NO2, SO2, CO, O3
- *   2. Satellite       – Sentinel-5P TROPOMI HCHO columns + DBSCAN hotspots
- *   3. AI Engine       – ERA5 transport, FourCastNet forecasts, Gemini insights
- *   4. Dashboard       – 2D/3D maps, IDW surface, wind streamlines, fire correlation
- *   5. Health Impact   – 0–100 exposure risk score, advisories, PDF reports
- *
- * Four modes (Assembled, Cutaway, Stations, One reading), five cameras, hover
- * and click on stations. Fully procedural three.js: no models, no images.
- *
- * Adapted from the "Agentic Factory" 3D template and re-themed for AeroVision
- * (Atmospheric Intelligence design system: #0b1326 base, cyan #4cd7f6,
- * amber #ffb95f, red #ef4444).
- *
- * Fills its box: give it a height (default 100vh). Dependencies: react, three.
- * `embed` hides the panels for a landing-page hero: on a frame wider than
- * 900 px the machine moves to the right 58 % and leaves the left side free.
- * Control it from outside with window.__aeroPipeline:
- *   setMode, setCamera, focusStation, play, pause.
- */
+export type MachineMode = 'assembled' | 'cutaway' | 'stations' | 'order'
+export type MachineCamera = 'overview' | 'side' | 'top' | 'station' | 'flight'
+export type StationId = 'ground' | 'satellite' | 'intelligence' | 'dashboard' | 'health'
 
-export type AeroVisionPipeline3DProps = {
-  /** Height of the scene box, e.g. 720 or '100vh'. Default '100vh'. */
+export type MachineApi = {
+  setMode: (name: string) => boolean
+  focusStation: (id: string) => boolean
+  setCamera: (name: string) => boolean
+  play: () => boolean
+  pause: () => boolean
+}
+
+declare global {
+  interface Window {
+    __aeroPipeline?: MachineApi
+    __machine?: MachineApi
+    __aeroPipelineDebug?: { getState: () => Record<string, unknown> }
+  }
+}
+
+export type AeroVisionPipelineCanvasProps = {
+  /** Height of the scene box, e.g. 720 or '100%'. Default '100%'. */
   height?: number | string
   className?: string
   /** Clean hero mode: no panels, the machine on the right of a wide frame. */
   embed?: boolean
-  /** A station was clicked: 'satellite' | 'intelligence' | 'dashboard' | 'ground' | 'health'. */
+  /** A station was clicked: 'ground' | 'satellite' | 'intelligence' | 'dashboard' | 'health'. */
   onStation?: (id: StationId) => void
   /** The first real frame is drawn. */
   onReady?: () => void
 }
 
-export default function AeroVisionPipeline3D({
-  height = '100vh',
+export type AeroVisionPipeline3DProps = {
+  /** Height of the canvas container or dashboard view */
+  height?: number | string
+  className?: string
+  /** Clean hero mode: no panels, canvas only */
+  embed?: boolean
+  /** A station was clicked */
+  onStation?: (id: StationId) => void
+  /** The first real frame is drawn */
+  onReady?: () => void
+  /** Navigate to another dashboard tab */
+  onNavigateTab?: (tab: string) => void
+}
+
+export function AeroVisionPipelineCanvas({
+  height = '100%',
   className,
   embed = false,
   onStation,
   onReady,
-}: AeroVisionPipeline3DProps) {
+}: AeroVisionPipelineCanvasProps) {
   const rootRef = useRef<HTMLDivElement>(null)
   const handlers = useRef({ onStation, onReady })
   useEffect(() => {
@@ -249,25 +280,600 @@ export default function AeroVisionPipeline3D({
 // initPipelineScene() returns a dispose function for React unmounts.
 // ---------------------------------------------------------------------------
 
-export type MachineMode = 'assembled' | 'cutaway' | 'stations' | 'order'
-export type MachineCamera = 'overview' | 'side' | 'top' | 'station' | 'flight'
-export type StationId = 'satellite' | 'intelligence' | 'dashboard' | 'ground' | 'health'
-
-export type MachineApi = {
-  setMode: (name: string) => boolean
-  focusStation: (id: string) => boolean
-  setCamera: (name: string) => boolean
-  play: () => boolean
-  pause: () => boolean
+export interface StationInfo {
+  id: StationId
+  step: number
+  name: string
+  badge: string
+  output: string
+  icon: React.ReactNode
+  category: string
+  description: string
+  sensors: string[]
+  algorithm: string
+  deliverables: string[]
+  metrics: { label: string; value: string; color: string }[]
+  targetTab: string
+  buttonLabel: string
 }
 
-declare global {
-  interface Window {
-    __aeroPipeline?: MachineApi
-    __machine?: MachineApi
-    __aeroPipelineDebug?: { getState: () => Record<string, unknown> }
+export const STATIONS: StationInfo[] = [
+  {
+    id: 'ground',
+    step: 1,
+    name: 'Ground Sensors',
+    badge: 'CPCB Network',
+    output: 'Telemetry Reading',
+    icon: <Satellite className="w-5 h-5 text-sky-500" />,
+    category: 'Ground CAAQMS Telemetry',
+    description:
+      'Continuous real-time ingestion from 29 CPCB monitoring stations reporting PM2.5, PM10, NO2, SO2, CO, and O3 criteria pollutants every hour across Delhi and national airsheds.',
+    sensors: [
+      'CPCB Ground Stations: Hourly PM2.5, PM10 criteria data',
+      'Dynamic telemetry from Delhi, Kolkata, Mumbai networks',
+      'Continuous sensor calibration and quality assurance',
+      'Ground truth validation collocation matrix',
+    ],
+    algorithm:
+      'Real-time ingestion and automated outlier rejection for ground station pollutant concentration streams.',
+    deliverables: ['Ingested Raw Telemetry Cache', 'Station Reading Cards', 'Ground Truth Collocation Matrix'],
+    metrics: [
+      { label: 'Active Network', value: '29 Stations', color: 'text-sky-600' },
+      { label: 'Ingest Cadence', value: 'Hourly', color: 'text-emerald-600' },
+      { label: 'Target City', value: 'Delhi-NCR', color: 'text-rose-600' },
+    ],
+    targetTab: 'pollutants',
+    buttonLabel: 'Explore Pollutant Maps',
+  },
+  {
+    id: 'satellite',
+    step: 2,
+    name: 'Satellite',
+    badge: 'TROPOMI Orbit',
+    output: 'HCHO Grid',
+    icon: <Layers className="w-5 h-5 text-indigo-500" />,
+    category: 'Sentinel-5P Remote Sensing',
+    description:
+      'Sentinel-5P TROPOMI formaldehyde (HCHO) total column retrieval, coupled with DBSCAN spatial clustering, Getis-Ord Gi* hot spot analysis, and Local Moran’s I spatial autocorrelation.',
+    sensors: [
+      'Sentinel-5P TROPOMI: Near-real-time HCHO column pass',
+      'DBSCAN Spatial Clustering: active plume clusters',
+      'Getis-Ord Gi*: High-confidence z-score hot spot detection',
+      'NASA FIRMS: Stubble burning fire radiative power',
+    ],
+    algorithm:
+      'HCHO column density extraction; spatial clustering of active biomass burning plumes across the Indo-Gangetic Plain.',
+    deliverables: ['TROPOMI HCHO Column Grid', 'DBSCAN Hotspot Clusters', 'Fire Radiance Correlation Map'],
+    metrics: [
+      { label: 'Z-Score (Gi*)', value: 'z = 3.2', color: 'text-amber-600' },
+      { label: 'Active Clusters', value: '4 Regions', color: 'text-rose-600' },
+      { label: 'Moran’s I', value: '0.41', color: 'text-indigo-600' },
+    ],
+    targetTab: 'hcho',
+    buttonLabel: 'Open HCHO Hotspots',
+  },
+  {
+    id: 'intelligence',
+    step: 3,
+    name: 'AI Engine',
+    badge: 'Deep Forecasting',
+    output: 'Atmospheric Forecast',
+    icon: <Cpu className="w-5 h-5 text-sky-600" />,
+    category: 'Neural Transport & LLM Insights',
+    description:
+      'High-performance atmospheric modeling pipeline running ECMWF ERA5 wind transport simulations, FourCastNet 7-day weather/pollution forecasts, and Gemini LLM synthesis of daily public insights.',
+    sensors: [
+      'FourCastNet: 7-day gridded atmospheric prediction',
+      'ERA5: 850 hPa wind transport and dispersion vectors',
+      'DBSCAN: Real-time HCHO plume trajectory queue',
+      'Gemini AI: Automated multimodal atmospheric insight synthesis',
+    ],
+    algorithm:
+      'Deep autoregressive weather models coupled with Lagrangian forward plume trajectories and Gemini generative summaries.',
+    deliverables: ['7-Day FourCastNet Grids', 'Dispersion Vectors', 'Gemini AI Intelligence Briefs'],
+    metrics: [
+      { label: 'Forecast Horizon', value: '7-Day Grid', color: 'text-sky-600' },
+      { label: 'Model Queue', value: '3 / 8 Running', color: 'text-amber-600' },
+      { label: 'AI Synthesis', value: 'Gemini Live', color: 'text-emerald-600' },
+    ],
+    targetTab: 'insights',
+    buttonLabel: 'View AI Insights',
+  },
+  {
+    id: 'dashboard',
+    step: 4,
+    name: 'Dashboard',
+    badge: 'Live Geospatial',
+    output: 'Interactive Live Map',
+    icon: <Flame className="w-5 h-5 text-amber-500" />,
+    category: 'Geospatial Analytics & Alerts',
+    description:
+      'Interactive 2D and 3D geospatial visualization suite with Inverse Distance Weighting (IDW) surface interpolation, animated wind streamlines, NASA FIRMS fire correlation, and automated alert cards.',
+    sensors: [
+      '2D & 3D WebGL Leaflet Maps with India boundaries',
+      'Inverse Distance Weighting (IDW) surface interpolation',
+      'Dynamic animated wind vector streamlines',
+      'Automated HCHO & particulate threshold alert cards',
+    ],
+    algorithm:
+      'Spatial IDW surface rendering with real-time vector particle wind streamlines and fire-pollution correlation overlay.',
+    deliverables: ['Interactive AQI & Pollutant Maps', 'Wind Streamline Layers', 'Floating Early-Warning Cards'],
+    metrics: [
+      { label: 'Map Surfaces', value: '2D / 3D WebGL', color: 'text-sky-600' },
+      { label: 'Streamlines', value: 'Dynamic ERA5', color: 'text-indigo-600' },
+      { label: 'Active Alerts', value: '1 Severe', color: 'text-rose-600' },
+    ],
+    targetTab: 'aqi',
+    buttonLabel: 'Open AQI Overview',
+  },
+  {
+    id: 'health',
+    step: 5,
+    name: 'Health Impact',
+    badge: 'Policy & Advisories',
+    output: 'Public Advisory & Report',
+    icon: <FileText className="w-5 h-5 text-emerald-600" />,
+    category: 'Public Health & Governance',
+    description:
+      'Translates real-time criteria pollution, active fire radiative power, and HCHO columns into a unified 0–100 Exposure Risk Score, vulnerable population advisories (Asthma/COPD), and automated PDF research reports.',
+    sensors: [
+      '0–100 Multi-Pollutant Exposure Risk Scoring Model',
+      'Vulnerable Cohort Early Warning (Asthma, COPD, Elderly)',
+      'Automated Official PDF Environmental Research Reports',
+      'CPCB NAQI Regulatory Compliance Thresholds',
+    ],
+    algorithm:
+      'Non-linear health risk function integrating PM2.5, HCHO anomalies, and smoke plume exposure into actionable public warnings.',
+    deliverables: ['Health Advisory Printouts', '0–100 Risk Score Cards', 'Exportable PDF Policy Bulletins'],
+    metrics: [
+      { label: 'Risk Score', value: '78 / 100', color: 'text-rose-600' },
+      { label: 'Risk Category', value: 'Critical', color: 'text-rose-700' },
+      { label: 'Reports Issued', value: 'PDF #001', color: 'text-slate-800' },
+    ],
+    targetTab: 'health',
+    buttonLabel: 'Check Health Impact',
+  },
+]
+
+export default function AeroVisionPipeline3D({
+  height,
+  className,
+  embed = false,
+  onStation,
+  onReady,
+  onNavigateTab,
+}: AeroVisionPipeline3DProps) {
+  const [activeStationId, setActiveStationId] = useState<StationId>('ground')
+  const [isPlaying, setIsPlaying] = useState(true)
+  const [activeMode, setActiveMode] = useState<MachineMode>('assembled')
+  const [activeCamera, setActiveCamera] = useState<MachineCamera>('overview')
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false)
+
+  if (embed) {
+    return (
+      <AeroVisionPipelineCanvas
+        height={height || '100vh'}
+        className={className}
+        embed={true}
+        onStation={onStation}
+        onReady={onReady}
+      />
+    )
   }
+
+  const handleStationClick = (id: StationId) => {
+    setActiveStationId(id)
+    onStation?.(id)
+    const m = window.__aeroPipeline || window.__machine
+    m?.focusStation(id)
+  }
+
+  const handleModeChange = (mode: MachineMode) => {
+    setActiveMode(mode)
+    const m = window.__aeroPipeline || window.__machine
+    m?.setMode(mode)
+  }
+
+  const handleCameraChange = (cam: MachineCamera) => {
+    setActiveCamera(cam)
+    const m = window.__aeroPipeline || window.__machine
+    m?.setCamera(cam)
+  }
+
+  const togglePlay = () => {
+    const m = window.__aeroPipeline || window.__machine
+    if (isPlaying) {
+      m?.pause()
+      setIsPlaying(false)
+    } else {
+      m?.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const activeStation = STATIONS.find((s) => s.id === activeStationId) || STATIONS[0]
+
+  const navigateTo = (tab: string) => {
+    if (onNavigateTab) {
+      onNavigateTab(tab)
+    } else {
+      window.location.hash = tab
+    }
+  }
+
+  return (
+    <div className={`flex-1 p-4 md:p-6 lg:p-8 space-y-6 max-w-[1700px] mx-auto animate-fade-in font-sans ${className || ''}`}>
+      {/* 1. Header & Live Indicator */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200/80 pb-5">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+            <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900">
+              AeroVision Pipeline 3D Twin
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/80">
+              Digital Twin v1.0
+            </span>
+          </div>
+          <p className="text-slate-500 text-sm mt-1 max-w-3xl">
+            Autonomous 3D Atmospheric Intelligence Pipeline simulating the complete ISRO SAC & CPCB satellite remote
+            sensing, CNN-LSTM neural estimation, and national air quality dispatch workflow.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowWorkflowModal(true)}
+            className="glass-panel px-3 py-1.5 rounded-xl text-xs font-semibold text-sky-700 bg-sky-50/90 hover:bg-sky-100 border border-sky-200/90 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs hover:shadow-xs"
+          >
+            <Workflow className="w-3.5 h-3.5 text-sky-600" />
+            3D Pipeline Workflow Guide
+          </button>
+          <span className="glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-slate-600 border border-slate-200 shadow-2xs flex items-center gap-1.5">
+            <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+            ISRO SAC · CPCB Pipeline Active
+          </span>
+          <span className="glass-panel px-3 py-1.5 rounded-xl text-xs font-mono text-slate-600 border border-slate-200 shadow-2xs">
+            Orbit: CYCLE 001
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Key Telemetry Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="glass-card p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>CPCB Stations</span>
+            <Database className="w-4 h-4 text-sky-500" />
+          </div>
+          <p className="text-xl font-extrabold text-slate-900 mt-1 font-heading">29 CAAQMS</p>
+          <span className="text-[10px] text-emerald-600 flex items-center gap-1 mt-0.5">
+            <CheckCircle2 className="w-3 h-3" /> Hourly Telemetry Stream
+          </span>
+        </div>
+
+        <div className="glass-card p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Sentinel-5P HCHO</span>
+            <Satellite className="w-4 h-4 text-indigo-500" />
+          </div>
+          <p className="text-xl font-extrabold text-slate-900 mt-1 font-heading">13:30 LST Pass</p>
+          <span className="text-[10px] text-indigo-600 flex items-center gap-1 mt-0.5">
+            <TrendingUp className="w-3 h-3" /> TROPOMI Multispectral
+          </span>
+        </div>
+
+        <div className="glass-card p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>AI Forecasting</span>
+            <Sparkles className="w-4 h-4 text-amber-500" />
+          </div>
+          <p className="text-xl font-extrabold text-slate-900 mt-1 font-heading">FourCastNet 7D</p>
+          <span className="text-[10px] text-amber-600 flex items-center gap-1 mt-0.5">
+            <GitBranch className="w-3 h-3" /> ECMWF ERA5 Transport
+          </span>
+        </div>
+
+        <div className="glass-card p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Health Advisory</span>
+            <Activity className="w-4 h-4 text-rose-500" />
+          </div>
+          <p className="text-xl font-extrabold text-slate-900 mt-1 font-heading">NAQI Protocol</p>
+          <span className="text-[10px] text-rose-600 flex items-center gap-1 mt-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping inline-block mr-0.5" />
+            Automatic PDF Bulletins
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Stage Selector Ribbon */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center px-1">
+          <span className="text-xs font-bold font-heading uppercase tracking-wider text-slate-500">
+            Select Atmospheric Processing Station
+          </span>
+          <span className="text-[11px] text-slate-500 font-mono">
+            Active: <strong className="text-sky-700">{activeStation.name}</strong> (Step {activeStation.step} of 5)
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2.5">
+          {STATIONS.map((station) => {
+            const isActive = station.id === activeStationId
+            return (
+              <button
+                key={station.id}
+                onClick={() => handleStationClick(station.id)}
+                className={`relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-sky-50/90 border-sky-500/80 shadow-xs ring-2 ring-sky-500/20'
+                    : 'bg-white hover:bg-slate-50 border-slate-200/90 hover:border-slate-300'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                    isActive ? 'bg-sky-500 text-white shadow-xs' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {station.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-mono font-bold text-sky-600">0{station.step}</span>
+                    <h4 className="text-xs font-heading font-bold text-slate-900 truncate">{station.name}</h4>
+                  </div>
+                  <span className="text-[10px] text-slate-500 block truncate">{station.output}</span>
+                </div>
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-sky-500 absolute right-2.5 top-2.5 animate-ping" />
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* 4. Centerpiece 3D Canvas Viewport in Studio Housing */}
+      <div
+        style={!isFullscreen && height ? { height } : undefined}
+        className={`rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden bg-slate-950 relative transition-all duration-300 ${
+          isFullscreen ? 'fixed inset-0 z-50 rounded-none h-screen w-screen' : 'h-[640px] md:h-[720px] w-full min-h-[580px]'
+        }`}
+      >
+        {/* Floating Top Control HUD */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+          {/* Left HUD: Mode Switcher */}
+          <div className="pointer-events-auto flex items-center gap-1 p-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl shadow-lg">
+            {(['assembled', 'cutaway', 'stations', 'order'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => handleModeChange(m)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
+                  activeMode === m
+                    ? 'bg-sky-500 text-white font-semibold shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                }`}
+              >
+                {m === 'order' ? 'Pipeline Run' : m}
+              </button>
+            ))}
+          </div>
+
+          {/* Right HUD: Camera Presets & Actions */}
+          <div className="pointer-events-auto flex items-center gap-1 p-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl shadow-lg">
+            {(['overview', 'side', 'top', 'station', 'flight'] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => handleCameraChange(c)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all capitalize cursor-pointer ${
+                  activeCamera === c
+                    ? 'bg-slate-700 text-sky-400 font-semibold shadow-2xs'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+
+            <div className="w-px h-4 bg-slate-700 mx-1" />
+
+            <button
+              onClick={togglePlay}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title={isPlaying ? 'Pause Simulation' : 'Resume Simulation'}
+            >
+              {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+            </button>
+
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* 3D Scene Viewport */}
+        <AeroVisionPipelineCanvas
+          height="100%"
+          className="w-full h-full"
+          onStation={(id) => {
+            setActiveStationId(id)
+            onStation?.(id)
+          }}
+          onReady={onReady}
+        />
+      </div>
+
+      {/* 5. Detailed Station Workflow Inspector Card */}
+      <div className="glass-panel p-6 rounded-3xl border border-slate-200 shadow-md">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200/80 flex items-center justify-center text-sky-600 shadow-xs">
+              {activeStation.icon}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-sky-600">STATION 0{activeStation.step}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-700">
+                  {activeStation.category}
+                </span>
+              </div>
+              <h3 className="text-xl font-heading font-extrabold text-slate-900 mt-0.5">
+                {activeStation.name}
+              </h3>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => handleModeChange('order')}
+              className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Trace Single Packet Run
+            </button>
+            <button
+              onClick={() => navigateTo(activeStation.targetTab)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              {activeStation.buttonLabel}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Station Scientific Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5">
+          <div className="space-y-3">
+            <h4 className="text-xs font-heading font-bold uppercase tracking-wider text-slate-500">
+              Overview & Objectives
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed">{activeStation.description}</p>
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+              <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block">Stage Output</span>
+              <p className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                {activeStation.output}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-heading font-bold uppercase tracking-wider text-slate-500">
+              Active Sensors & Inputs
+            </h4>
+            <ul className="space-y-2">
+              {activeStation.sensors.map((sensor, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-xs text-slate-700">
+                  <span className="w-4 h-4 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span>{sensor}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <h4 className="text-xs font-heading font-bold uppercase tracking-wider text-slate-500">
+              Live Key Metrics
+            </h4>
+            <div className="grid grid-cols-1 gap-2.5">
+              {activeStation.metrics.map((m, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-xs text-slate-500">{m.label}</span>
+                  <span className={`text-xs font-bold font-mono ${m.color}`}>{m.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="pt-2">
+              <span className="text-[10px] font-mono uppercase text-slate-500 font-bold block mb-1">
+                Mathematical / Physical Formulation
+              </span>
+              <p className="text-[11px] font-mono text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-snug">
+                {activeStation.algorithm}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. Interactive Workflow Guide Modal */}
+      {showWorkflowModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 flex items-center justify-center">
+                  <Workflow className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-heading font-bold text-slate-900">
+                    AeroVision 3D Pipeline Architecture Guide
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    How telemetry moves through 5 interconnected physical stations on the 3D twin plate.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWorkflowModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {STATIONS.map((station) => (
+                <div key={station.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-sky-500 text-white font-mono text-xs font-bold flex items-center justify-center">
+                        0{station.step}
+                      </span>
+                      <h4 className="text-sm font-bold text-slate-900">{station.name}</h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700 font-medium">
+                        {station.badge}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowWorkflowModal(false)
+                        navigateTo(station.targetTab)
+                      }}
+                      className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Open Module
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">{station.description}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowWorkflowModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer"
+              >
+                Close & Return to 3D Machine
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
+
+export { AeroVisionPipeline3D as AgenticFactory3DDemo }
 
 export type PipelineSceneOptions = {
   /** Clean hero: panels hidden, wheel and touch scroll the page. */

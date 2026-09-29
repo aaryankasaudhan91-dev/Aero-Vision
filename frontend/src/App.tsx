@@ -19,7 +19,7 @@ const ReportsDashboard = lazy(() => import('./components/ReportsDashboard'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const TermsAndConditions = lazy(() => import('./components/TermsAndConditions'));
 const NotFound = lazy(() => import('./components/NotFound'));
-const AgenticFactory3DDemo = lazy(() => import('./components/ui/demo'));
+const AeroPipeline3D = lazy(() => import('./components/ui/aero-pipeline-3d'));
 
 const VALID_TABS = [
   'aqi',
@@ -175,7 +175,7 @@ function App() {
       case 'demo':
       case '3d':
       case 'aero-pipeline':
-        return <AgenticFactory3DDemo onNavigateTab={handleTabChange} />;
+        return <AeroPipeline3D onNavigateTab={handleTabChange} />;
       case 'privacy':
         return <PrivacyPolicy />;
       case 'terms':
