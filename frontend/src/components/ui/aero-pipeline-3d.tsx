@@ -517,7 +517,7 @@ export default function AeroVisionPipeline3D({
             </span>
           </div>
           <p className="text-slate-500 text-sm mt-1 max-w-3xl">
-            Autonomous 3D Atmospheric Intelligence Pipeline simulating the complete ISRO SAC & CPCB satellite remote
+            Autonomous 3D Atmospheric Intelligence Pipeline simulating the complete ISRO SAC &amp; CPCB satellite remote
             sensing, CNN-LSTM neural estimation, and national air quality dispatch workflow.
           </p>
         </div>
