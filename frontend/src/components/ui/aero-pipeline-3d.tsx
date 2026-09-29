@@ -15,6 +15,8 @@ import {
   Activity,
   Maximize2,
   Minimize2,
+  ZoomIn,
+  ZoomOut,
   Play,
   Pause,
   RotateCcw,
@@ -40,6 +42,9 @@ export type MachineApi = {
   setCamera: (name: string) => boolean
   play: () => boolean
   pause: () => boolean
+  zoomIn: () => boolean
+  zoomOut: () => boolean
+  resetZoom: () => boolean
 }
 
 declare global {
@@ -449,6 +454,65 @@ export default function AeroVisionPipeline3D({
   const [activeCamera, setActiveCamera] = useState<MachineCamera>('overview')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showWorkflowModal, setShowWorkflowModal] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
+        if (containerRef.current?.requestFullscreen) {
+          await containerRef.current.requestFullscreen()
+        } else if ((containerRef.current as any)?.webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen()
+        }
+        setIsFullscreen(true)
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        }
+        setIsFullscreen(false)
+      }
+    } catch {
+      setIsFullscreen((prev) => !prev)
+    }
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 50)
+  }
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFull = !!(document.fullscreenElement || (document as any).webkitFullscreenElement)
+      setIsFullscreen(isFull)
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 50)
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault()
+        toggleFullscreen()
+      } else if (e.key === '+' || e.key === '=') {
+        window.__aeroPipeline?.zoomIn()
+      } else if (e.key === '-' || e.key === '_') {
+        window.__aeroPipeline?.zoomOut()
+      } else if (e.key === 'r' || e.key === 'R') {
+        window.__aeroPipeline?.resetZoom()
+      }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
 
   if (embed) {
     return (
@@ -637,9 +701,12 @@ export default function AeroVisionPipeline3D({
 
       {/* 4. Centerpiece 3D Canvas Viewport in Studio Housing */}
       <div
+        ref={containerRef}
         style={!isFullscreen && height ? { height } : undefined}
-        className={`rounded-3xl border border-slate-200/90 shadow-2xl overflow-hidden bg-slate-950 relative transition-all duration-300 ${
-          isFullscreen ? 'fixed inset-0 z-50 rounded-none h-screen w-screen' : 'h-[640px] md:h-[720px] w-full min-h-[580px]'
+        className={`overflow-hidden bg-slate-950 relative transition-all duration-300 ${
+          isFullscreen
+            ? 'fixed inset-0 z-[999999] w-screen h-screen rounded-none m-0 p-0 border-none'
+            : 'h-[640px] md:h-[720px] w-full min-h-[580px] rounded-3xl border border-slate-200/90 shadow-2xl'
         }`}
       >
         {/* Floating Top Control HUD */}
@@ -661,7 +728,7 @@ export default function AeroVisionPipeline3D({
             ))}
           </div>
 
-          {/* Right HUD: Camera Presets & Actions */}
+          {/* Right HUD: Camera Presets, Zoom Controls & Fullscreen */}
           <div className="pointer-events-auto flex items-center gap-1 p-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl shadow-lg">
             {(['overview', 'side', 'top', 'station', 'flight'] as const).map((c) => (
               <button
@@ -679,6 +746,46 @@ export default function AeroVisionPipeline3D({
 
             <div className="w-px h-4 bg-slate-700 mx-1" />
 
+            {/* Interactive Zoom Controls */}
+            <button
+              onClick={() => {
+                const m = window.__aeroPipeline || window.__machine
+                m?.zoomIn()
+              }}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Zoom In (+)"
+              aria-label="Zoom in"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => {
+                const m = window.__aeroPipeline || window.__machine
+                m?.zoomOut()
+              }}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Zoom Out (-)"
+              aria-label="Zoom out"
+            >
+              <ZoomOut className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => {
+                const m = window.__aeroPipeline || window.__machine
+                m?.resetZoom()
+              }}
+              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Fit View / Reset Zoom (R)"
+              aria-label="Reset zoom"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="w-px h-4 bg-slate-700 mx-1" />
+
+            {/* Simulation Play / Pause */}
             <button
               onClick={togglePlay}
               className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
@@ -687,12 +794,30 @@ export default function AeroVisionPipeline3D({
               {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
             </button>
 
+            <div className="w-px h-4 bg-slate-700 mx-1" />
+
+            {/* Make Full Screen Button */}
             <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-              title={isFullscreen ? 'Exit Fullscreen' : 'View Fullscreen'}
+              onClick={toggleFullscreen}
+              className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold ${
+                isFullscreen
+                  ? 'bg-sky-500 text-slate-950 font-bold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+              }`}
+              title={isFullscreen ? 'Exit Full Screen (Esc or F)' : 'Make Full Screen (F)'}
+              aria-label={isFullscreen ? 'Exit full screen' : 'Make full screen'}
             >
-              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Exit Full</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="hidden sm:inline">Full Screen</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -2047,14 +2172,18 @@ function initPipelineScene(
         height
       )
       const aspect = width / height
-      const availableWidth = mobile ? 0.91 : Math.min(0.55, aspect > 2 ? 0.54 : 0.57)
+      const availableWidth = embedded
+        ? (mobile ? 0.91 : Math.min(0.55, aspect > 2 ? 0.54 : 0.57))
+        : (mobile ? 0.94 : 0.88)
       const horizontalFit =
         17.3 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect * availableWidth)
       const verticalFit =
-        11.5 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (embedded ? 0.85 : 0.62))
-      baseDistance =
-        (Math.max(horizontalFit, verticalFit) * (mobile ? 0.97 : 1)) / (embedded ? (mobile ? 1.15 : 1.45) : 1)
-      controls.maxDistance = Math.max(55, baseDistance * 1.6)
+        11.5 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (embedded ? 0.85 : 0.78))
+      baseDistance = embedded
+        ? (Math.max(horizontalFit, verticalFit) * (mobile ? 0.97 : 1)) / (mobile ? 1.15 : 1.45)
+        : Math.max(horizontalFit, verticalFit) * (mobile ? 0.92 : 0.84)
+      controls.minDistance = 2.5
+      controls.maxDistance = Math.max(65, baseDistance * 1.8)
       camera.updateProjectionMatrix()
       setCameraGoal()
       cameraAnimating = true
@@ -2070,7 +2199,7 @@ function initPipelineScene(
       if (cameraMode === 'station') {
         const s = stations.find((s) => s.id === selected)!
         desiredTarget.copy(s.group.position).add(new THREE.Vector3(0, 1.25, 0))
-        desiredPosition.copy(desiredTarget).addScaledVector(viewDirection, mobile ? 9 : 12)
+        desiredPosition.copy(desiredTarget).addScaledVector(viewDirection, mobile ? 6.5 : 8)
       } else {
         desiredTarget.set(0, 1, 0)
         const distance = baseDistance * expand
@@ -2170,8 +2299,38 @@ function initPipelineScene(
       syncPlayback()
       return true
     }
+    function zoomIn() {
+      lastInteraction = performance.now()
+      cameraAnimating = false
+      const dir = new THREE.Vector3().subVectors(camera.position, controls.target)
+      const dist = dir.length()
+      if (dist > controls.minDistance + 0.5) {
+        camera.position.addScaledVector(dir.normalize(), -Math.max(1.5, dist * 0.22))
+        controls.update()
+      }
+      return true
+    }
 
-    const api: MachineApi = { setMode, focusStation, setCamera, play, pause }
+    function zoomOut() {
+      lastInteraction = performance.now()
+      cameraAnimating = false
+      const dir = new THREE.Vector3().subVectors(camera.position, controls.target)
+      const dist = dir.length()
+      if (dist < controls.maxDistance - 1) {
+        camera.position.addScaledVector(dir.normalize(), Math.max(1.5, dist * 0.25))
+        controls.update()
+      }
+      return true
+    }
+
+    function resetZoom() {
+      lastInteraction = performance.now()
+      setCameraGoal()
+      cameraAnimating = true
+      return true
+    }
+
+    const api: MachineApi = { setMode, focusStation, setCamera, play, pause, zoomIn, zoomOut, resetZoom }
     window.__aeroPipeline = api
     window.__machine = api
     cleanups.push(() => {
@@ -2185,6 +2344,15 @@ function initPipelineScene(
     root
       .querySelectorAll<HTMLElement>('[data-camera]')
       .forEach((b) => listen(b, 'click', () => setCamera(b.dataset.camera ?? '')))
+    root
+      .querySelectorAll<HTMLElement>('[data-zoom]')
+      .forEach((b) =>
+        listen(b, 'click', () => {
+          if (b.dataset.zoom === 'in') zoomIn()
+          else if (b.dataset.zoom === 'out') zoomOut()
+          else resetZoom()
+        })
+      )
     listen($('play'), 'click', () => (playing ? pause() : play()))
     syncPlayback()
 
