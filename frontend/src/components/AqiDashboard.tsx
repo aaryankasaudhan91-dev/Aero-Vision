@@ -15,7 +15,11 @@ import {
 import { aqiApi } from '../services/api';
 import FilterBar from './FilterBar';
 
-export const AqiDashboard: React.FC = () => {
+interface AqiDashboardProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export const AqiDashboard: React.FC<AqiDashboardProps> = ({ onNavigateTab }) => {
   const [selectedState, setSelectedState] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [citiesList, setCitiesList] = useState<string[]>([]);
@@ -173,6 +177,43 @@ export const AqiDashboard: React.FC = () => {
             Ground Truth: CPCB Realtime
           </span>
         </div>
+      </div>
+
+      {/* 3D Atmospheric Pipeline Twin Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-sky-950 to-indigo-950 p-4 md:p-5 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-sky-800/40 shadow-md">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-2xl shrink-0">
+            🛰️
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-sky-500/30 text-sky-300 border border-sky-400/30">
+                Interactive 3D Digital Twin
+              </span>
+              <span className="text-xs text-sky-400 font-mono">5 Real-time Stages</span>
+            </div>
+            <h3 className="text-base font-heading font-bold text-white mt-0.5">
+              Explore the AeroVision Atmospheric Processing Machine
+            </h3>
+            <p className="text-xs text-slate-300 mt-0.5 max-w-2xl">
+              Inspect how raw CPCB ground sensors & Sentinel-5P TROPOMI satellite feeds pass through AI transport physics, 3D cartography, and public health advisory algorithms.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            if (onNavigateTab) {
+              onNavigateTab('pipeline');
+            } else {
+              window.location.hash = 'pipeline';
+            }
+          }}
+          className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
+        >
+          <span>Launch 3D Pipeline</span>
+          <span>→</span>
+        </button>
       </div>
 
       {/* Global Filter Bar */}

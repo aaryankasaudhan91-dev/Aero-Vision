@@ -19,6 +19,7 @@ const ReportsDashboard = lazy(() => import('./components/ReportsDashboard'));
 const PrivacyPolicy = lazy(() => import('./components/PrivacyPolicy'));
 const TermsAndConditions = lazy(() => import('./components/TermsAndConditions'));
 const NotFound = lazy(() => import('./components/NotFound'));
+const AgenticFactory3DDemo = lazy(() => import('./components/ui/demo'));
 
 const VALID_TABS = [
   'aqi',
@@ -30,6 +31,11 @@ const VALID_TABS = [
   'weather',
   'insights',
   'reports',
+  'pipeline',
+  'factory',
+  'demo',
+  '3d',
+  'aero-pipeline',
   'privacy',
   'terms',
 ];
@@ -164,6 +170,12 @@ function App() {
         return <InsightsDashboard />;
       case 'reports':
         return <ReportsDashboard />;
+      case 'factory':
+      case 'pipeline':
+      case 'demo':
+      case '3d':
+      case 'aero-pipeline':
+        return <AgenticFactory3DDemo onNavigateTab={handleTabChange} />;
       case 'privacy':
         return <PrivacyPolicy />;
       case 'terms':
@@ -173,9 +185,16 @@ function App() {
         if (!VALID_TABS.includes(activeTab)) {
           return <NotFound onNavigateHome={handleTabChange} attemptedRoute={activeTab} />;
         }
-        return <AqiDashboard />;
+        return <AqiDashboard onNavigateTab={handleTabChange} />;
     }
   };
+
+  const isPipelineActive =
+    activeTab === 'pipeline' ||
+    activeTab === 'factory' ||
+    activeTab === 'demo' ||
+    activeTab === '3d' ||
+    activeTab === 'aero-pipeline';
 
   return (
     <div className="flex bg-slate-50 min-h-screen text-slate-900 font-sans relative selection:bg-sky-500 selection:text-white">
@@ -196,7 +215,7 @@ function App() {
       >
         {/* Top Header Bar */}
         <header className="h-16 border-b border-slate-200/80 px-4 md:px-8 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-20 shadow-2xs">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Hamburger / Toggle Button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -212,7 +231,24 @@ function App() {
               <span>India National Grid</span>
             </span>
 
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 hidden md:inline-flex shadow-2xs">
+            {/* Quick Access to 3D Pipeline Digital Twin */}
+            <button
+              onClick={() => handleTabChange('pipeline')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                isPipelineActive
+                  ? 'bg-sky-600 text-white border-sky-500 ring-2 ring-sky-500/20'
+                  : 'bg-gradient-to-r from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-900 border-sky-200/80 hover:border-sky-300'
+              }`}
+              title="Launch AeroVision 3D Pipeline Simulation Twin"
+            >
+              <span className="text-sm">🛰️</span>
+              <span className="font-heading">3D Pipeline Twin</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500 text-white font-mono uppercase tracking-wider font-extrabold hidden md:inline">
+                3D
+              </span>
+            </button>
+
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 hidden xl:inline-flex shadow-2xs">
               V1.2.0-Production
             </span>
           </div>

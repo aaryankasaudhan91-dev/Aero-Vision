@@ -19,6 +19,7 @@ const tabs = [
   { id: 'weather', name: 'Weather Dynamics', icon: '🌦️' },
   { id: 'insights', name: 'AI Insights', icon: '🧠' },
   { id: 'reports', name: 'Research Reports', icon: '📝' },
+  { id: 'pipeline', name: '3D Pipeline Twin', icon: '🛰️', badge: '3D' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -88,7 +89,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             Analytical Modules
           </div>
           {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
+            const isPipeline = tab.id === 'pipeline';
+            const isActive =
+              activeTab === tab.id ||
+              (isPipeline &&
+                (activeTab === 'factory' ||
+                  activeTab === 'demo' ||
+                  activeTab === '3d' ||
+                  activeTab === 'aero-pipeline'));
             return (
               <button
                 key={tab.id}
@@ -102,6 +110,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <span className="text-sm" aria-hidden="true">{tab.icon}</span>
                 <span className="truncate">{tab.name}</span>
+                {tab.badge && (
+                  <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-sky-500 text-white font-mono font-bold tracking-wider">
+                    {tab.badge}
+                  </span>
+                )}
               </button>
             );
           })}
