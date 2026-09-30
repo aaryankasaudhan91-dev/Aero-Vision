@@ -7,7 +7,7 @@
       "destination": "https://aero-vision.onrender.com/api/$1"
     },
     {
-      "source": "/((?!api/|assets/|favicon|site\\.webmanifest|robots\\.txt|sitemap\\.xml|llms\\.txt|llms-full\\.txt|ai-catalog\\.json|ard\\.json|\\.well-known/|.*\\.(png|jpg|jpeg|webp|svg|ico|gif|json|xml|txt)).*)",
+      "source": "/((?!api/|assets/|favicon|site\\.webmanifest|robots\\.txt|sitemap\\.xml|llms|ai-catalog|ard|\\.well-known).*)",
       "destination": "/"
     }
   ],
@@ -22,7 +22,7 @@
       ]
     },
     {
-      "source": "/(.*\\.(ico|png|jpg|jpeg|webp|svg|gif|woff|woff2|ttf|eot))",
+      "source": "/(.*)\\.(ico|png|jpg|jpeg|webp|svg|gif|woff|woff2|ttf|eot)$",
       "headers": [
         {
           "key": "Cache-Control",
@@ -31,7 +31,24 @@
       ]
     },
     {
-      "source": "/(ai-catalog\\.json|ard\\.json|\\.well-known/(.*))",
+      "source": "/.well-known/(.*)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json; charset=utf-8"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/(ai-catalog\\.json|ard\\.json)",
       "headers": [
         {
           "key": "Content-Type",
