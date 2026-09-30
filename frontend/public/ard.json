@@ -1,0 +1,57 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "AeroVision India",
+    "identifier": "did:web:aerovision.in",
+    "documentationUrl": "https://aerovision.in/#reports",
+    "logoUrl": "https://aerovision.in/app-logo.webp"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:aerovision.in:api:aqi-telemetry",
+      "displayName": "AeroVision National Air Quality Index API",
+      "type": "application/openapi+json",
+      "url": "https://aero-vision.onrender.com/openapi.json",
+      "description": "National air quality telemetry for India aggregating Central Pollution Control Board (CPCB) continuous ambient stations and Sentinel-5P multispectral satellite estimates.",
+      "representativeQueries": [
+        "What is the current AQI in Delhi?",
+        "Fetch PM2.5 and PM10 particulate levels across Indian cities",
+        "Get live CPCB ground air quality observations"
+      ]
+    },
+    {
+      "identifier": "urn:air:aerovision.in:api:hcho-hotspots",
+      "displayName": "Sentinel-5P HCHO Formaldehyde Hotspot API",
+      "type": "application/openapi+json",
+      "url": "https://aero-vision.onrender.com/openapi.json",
+      "description": "Multispectral Sentinel-5P TROPOMI tropospheric formaldehyde (HCHO) hotspot detection and industrial VOC emissions monitoring.",
+      "representativeQueries": [
+        "Detect formaldehyde hotspots in India",
+        "Retrieve Sentinel-5P TROPOMI HCHO column densities",
+        "Monitor petrochemical and industrial emissions"
+      ]
+    },
+    {
+      "identifier": "urn:air:aerovision.in:api:fire-correlation",
+      "displayName": "NASA FIRMS Active Thermal Anomaly API",
+      "type": "application/openapi+json",
+      "url": "https://aero-vision.onrender.com/openapi.json",
+      "description": "Near real-time NASA FIRMS thermal anomaly detection correlated with atmospheric smoke plumes and air pollution episodes.",
+      "representativeQueries": [
+        "Detect active crop residue burning and forest fires in India",
+        "Correlate NASA FIRMS fire radiative power with ground AQI spikes"
+      ]
+    },
+    {
+      "identifier": "urn:air:aerovision.in:api:weather-dynamics",
+      "displayName": "ECMWF ERA5 & Planetary Boundary Layer API",
+      "type": "application/openapi+json",
+      "url": "https://aero-vision.onrender.com/openapi.json",
+      "description": "Atmospheric boundary layer height, temperature inversions, and wind vector streamlines influencing pollution trapping.",
+      "representativeQueries": [
+        "What is the planetary boundary layer height in northern India?",
+        "Fetch wind transport vectors and smoke dispersion trajectory"
+      ]
+    }
+  ]
+}

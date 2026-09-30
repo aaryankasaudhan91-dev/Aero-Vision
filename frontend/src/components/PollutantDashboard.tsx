@@ -128,12 +128,12 @@ export const PollutantDashboard: React.FC = () => {
   return (
     <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div>
-        <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+        <h1 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
           Target Pollutant Distributions
           {loading && (
             <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></span>
           )}
-        </h2>
+        </h1>
         <p className="text-slate-500 text-sm mt-1">
           Granular spatial monitoring and regulatory standards comparison across Indian monitoring networks.
         </p>

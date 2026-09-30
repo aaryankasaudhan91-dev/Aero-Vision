@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
-import IndiaMap3D from './IndiaMap3D';
 import IndiaMap2D from './IndiaMap2D';
+
+const IndiaMap3D = lazy(() => import('./IndiaMap3D'));
 
 interface MapPoint {
   latitude: number;
@@ -131,31 +132,38 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
 
         {/* Fullscreen Portal into document.body: covers 100vw x 100vh with NO other things visible */}
         {createPortal(
-          <div className="fixed inset-0 z-[9999999] w-screen h-screen bg-slate-950 overflow-hidden flex flex-col p-0 m-0 animate-fadeIn">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Fullscreen Subcontinental Atmospheric Map"
+            className="fixed inset-0 z-[9999999] w-screen h-screen bg-slate-950 overflow-hidden flex flex-col p-0 m-0 animate-fadeIn"
+          >
             {/* Floating Fullscreen Header Controls */}
             <div className="absolute top-4 right-4 z-40 flex items-center gap-2 pointer-events-auto">
               {/* 2D / 3D Switcher */}
               <div className="glass-panel p-1 rounded-xl border border-slate-700/80 bg-slate-900/90 backdrop-blur-md flex gap-1 shadow-md">
                 <button
                   onClick={() => setMapMode('2D')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
+                  className={`min-h-[38px] min-w-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 cursor-pointer ${
                     mapMode === '2D'
                       ? 'bg-sky-600 text-white shadow-xs'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`}
                   aria-label="Switch to 2D Planar GIS Map"
+                  aria-pressed={mapMode === '2D'}
                 >
                   <span>🗺️</span>
                   <span>2D GIS</span>
                 </button>
                 <button
                   onClick={() => setMapMode('3D')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 ${
+                  className={`min-h-[38px] min-w-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 cursor-pointer ${
                     mapMode === '3D'
                       ? 'bg-sky-600 text-white shadow-xs'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800'
                   }`}
                   aria-label="Switch to 3D WebGL Orbit Map"
+                  aria-pressed={mapMode === '3D'}
                 >
                   <span>🌐</span>
                   <span>3D WebGL</span>
@@ -165,7 +173,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
               {/* Exit Full Screen Button */}
               <button
                 onClick={toggleEnlarge}
-                className="glass-panel px-3.5 py-2 rounded-xl border border-rose-500/80 bg-rose-600 hover:bg-rose-500 text-white text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1.5 shadow-lg shadow-rose-950/40"
+                className="glass-panel min-h-[38px] px-3.5 py-2 rounded-xl border border-rose-500/80 bg-rose-600 hover:bg-rose-500 text-white text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1.5 shadow-lg shadow-rose-950/40 cursor-pointer"
                 title="Exit Full Screen (Esc)"
               >
                 <span>⤡</span>
@@ -179,12 +187,12 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
                 🛰️
               </div>
               <div>
-                <h1 className="text-sm font-heading font-bold text-white tracking-tight flex items-center gap-2">
+                <h2 className="text-sm font-heading font-bold text-white tracking-tight flex items-center gap-2">
                   {resolvedVariableName} Subcontinental Telemetry
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     LIVE
                   </span>
-                </h1>
+                </h2>
                 <p className="text-[11px] text-slate-400">
                   Full Screen Coverage (No other elements) • Press Esc to exit
                 </p>
@@ -194,12 +202,20 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
             {/* Edge-to-Edge Map Body (100% width and height, 0 padding, covering whole screen) */}
             <div className="w-full h-full relative">
               {mapMode === '3D' ? (
-                <IndiaMap3D
-                  points={points}
-                  dataType={dataType}
-                  variableName={resolvedVariableName}
-                  unit={resolvedUnit}
-                />
+                <Suspense
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-slate-950 text-sky-400 font-mono text-xs">
+                      <span className="animate-spin mr-2">🛰️</span> Initializing 3D Atmospheric WebGL Canvas...
+                    </div>
+                  }
+                >
+                  <IndiaMap3D
+                    points={points}
+                    dataType={dataType}
+                    variableName={resolvedVariableName}
+                    unit={resolvedUnit}
+                  />
+                </Suspense>
               ) : (
                 <IndiaMap2D
                   points={points}
@@ -225,24 +241,26 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         <div className="glass-panel p-1 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md flex gap-1 shadow-sm">
           <button
             onClick={() => setMapMode('2D')}
-            className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 ${
+            className={`min-h-[36px] min-w-[36px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 cursor-pointer ${
               mapMode === '2D'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100/80 dark:hover:bg-slate-800'
             }`}
             aria-label="Switch to 2D Planar GIS Map"
+            aria-pressed={mapMode === '2D'}
           >
             <span>🗺️</span>
             <span>2D</span>
           </button>
           <button
             onClick={() => setMapMode('3D')}
-            className={`flex items-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 ${
+            className={`min-h-[36px] min-w-[36px] flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all duration-200 cursor-pointer ${
               mapMode === '3D'
                 ? 'bg-sky-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100/80 dark:hover:bg-slate-800'
             }`}
             aria-label="Switch to 3D WebGL Orbit Map"
+            aria-pressed={mapMode === '3D'}
           >
             <span>🌐</span>
             <span>3D</span>
@@ -252,7 +270,7 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
         {/* Full Screen Button */}
         <button
           onClick={toggleEnlarge}
-          className="glass-panel px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-[11px] sm:text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm text-slate-700 dark:text-slate-200 hover:text-slate-950 hover:bg-slate-100/80 dark:hover:bg-slate-800"
+          className="glass-panel min-h-[36px] px-3 py-1.5 sm:py-2 rounded-xl border border-slate-200/90 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-xs font-heading font-semibold transition-all duration-200 flex items-center gap-1 shadow-sm text-slate-700 dark:text-slate-200 hover:text-slate-950 hover:bg-slate-100/80 dark:hover:bg-slate-800 cursor-pointer"
           title="Cover Full Screen"
           aria-label="Cover Full Screen"
         >
@@ -264,12 +282,20 @@ export const IndiaMap: React.FC<IndiaMapProps> = ({
       {/* Inline Map Body */}
       <div className="w-full h-full relative transition-all duration-300">
         {mapMode === '3D' ? (
-          <IndiaMap3D
-            points={points}
-            dataType={dataType}
-            variableName={resolvedVariableName}
-            unit={resolvedUnit}
-          />
+          <Suspense
+            fallback={
+              <div className="w-full h-full flex items-center justify-center bg-slate-900 text-sky-400 font-mono text-xs">
+                <span className="animate-spin mr-2">🛰️</span> Initializing 3D WebGL Canvas...
+              </div>
+            }
+          >
+            <IndiaMap3D
+              points={points}
+              dataType={dataType}
+              variableName={resolvedVariableName}
+              unit={resolvedUnit}
+            />
+          </Suspense>
         ) : (
           <IndiaMap2D
             points={points}

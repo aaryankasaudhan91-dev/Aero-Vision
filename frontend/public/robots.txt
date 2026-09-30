@@ -24,3 +24,8 @@ Crawl-delay: 2
 
 # XML Sitemap Location
 Sitemap: https://aerovision.in/sitemap.xml
+
+# Agentic Resource Discovery (ARD) AI Catalog Manifests
+Agentmap: https://aerovision.in/.well-known/ai-catalog.json
+Agentmap: https://aerovision.in/.well-known/ard.json
+Agentmap: https://aerovision.in/ai-catalog.json

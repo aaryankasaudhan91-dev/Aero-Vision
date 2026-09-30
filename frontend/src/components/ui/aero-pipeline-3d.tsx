@@ -175,7 +175,7 @@ export function AeroVisionPipelineCanvas({
       </div>
 
       <div id="labels" />
-      <div id="tooltip" role="tooltip">
+      <div id="tooltip" role="tooltip" aria-hidden="true">
         <strong />
         <p />
       </div>
@@ -2753,11 +2753,11 @@ const STYLES = String.raw`
 .aero-pipeline-3d .mode-bar svg { width: 14px; height: 14px; }
 .aero-pipeline-3d .camera-row { display: flex; align-items: center; justify-content: center; gap: 4px; }
 .aero-pipeline-3d .camera-row .caption { font-size: 10px; color: #5a6b8c; margin-right: 9px; }
-.aero-pipeline-3d .camera-row button { border: 0; background: transparent; color: #7385a3; padding: 5px 9px; font-size: 10px; transition: color 0.2s; }
+.aero-pipeline-3d .camera-row button { border: 0; background: transparent; color: #7385a3; padding: 6px 10px; font-size: 11px; min-height: 32px; min-width: 32px; display: inline-flex; align-items: center; justify-content: center; transition: color 0.2s; cursor: pointer; }
 .aero-pipeline-3d .camera-row button:hover, .aero-pipeline-3d .camera-row button[aria-pressed='true'] { color: var(--white); }
 .aero-pipeline-3d .camera-row button[aria-pressed='true']:after { content: ''; display: block; width: 3px; height: 3px; background: var(--accent); border-radius: 50%; margin: 5px auto -8px; }
 .aero-pipeline-3d .camera-row .divider { width: 1px; height: 13px; background: var(--line); margin: 0 8px; }
-.aero-pipeline-3d .camera-row #play { padding: 5px; width: 25px; height: 25px; display: grid; place-items: center; }
+.aero-pipeline-3d .camera-row #play { padding: 6px; width: 36px; height: 36px; min-width: 36px; min-height: 36px; display: grid; place-items: center; cursor: pointer; }
 .aero-pipeline-3d .footer { position: absolute; bottom: 25px; left: 32px; right: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; }
 .aero-pipeline-3d .wordmark { font-size: 11px; color: #6f7f9c; text-decoration: none; pointer-events: auto; }
 .aero-pipeline-3d .wordmark span { color: #a3b1c7; }

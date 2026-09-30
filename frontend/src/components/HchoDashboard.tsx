@@ -238,12 +238,12 @@ export const HchoDashboard: React.FC = () => {
       {/* ── Page Header & Live Telemetry Indicator ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2.5">
+          <h1 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2.5">
             TROPOMI Formaldehyde (HCHO) Hotspots
             {loading && (
               <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent" />
             )}
-          </h2>
+          </h1>
           <p className="text-slate-500 text-sm mt-1">
             Copernicus Sentinel-5P Near Real-Time (NRTI) vertical column densities and machine learning spatial clusters.
           </p>

@@ -185,10 +185,10 @@ export const AlertSubscriptionModal: React.FC<AlertModalProps> = ({ isOpen, onCl
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-800 p-1 rounded-lg transition-colors cursor-pointer text-xl"
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-800 w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors cursor-pointer text-xl"
           aria-label="Close dialog"
         >
-          ✕
+          <span className="leading-none">✕</span>
         </button>
 
         {!submitted ? (

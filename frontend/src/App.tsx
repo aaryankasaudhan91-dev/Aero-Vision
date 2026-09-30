@@ -4,10 +4,10 @@ import Footer from './components/Footer';
 import CookieConsent from './components/CookieConsent';
 import AlertSubscriptionModal from './components/AlertSubscriptionModal';
 import { trackTabChange, trackPageView, initAnalytics } from './services/analytics';
+import AqiDashboard from './components/AqiDashboard';
 import './App.css';
 
-// Lazy-load dashboard modules for sub-second First Contentful Paint (FCP)
-const AqiDashboard = lazy(() => import('./components/AqiDashboard'));
+// Lazy-load secondary dashboard modules for sub-second First Contentful Paint (FCP)
 const PollutantDashboard = lazy(() => import('./components/PollutantDashboard'));
 const HealthDashboard = lazy(() => import('./components/HealthDashboard'));
 const HchoDashboard = lazy(() => import('./components/HchoDashboard'));
@@ -69,21 +69,27 @@ function App() {
   };
 
   const [activeTab, setActiveTab] = useState(parseCurrentRoute);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const [latency, setLatency] = useState(12);
   const [lastSync, setLastSync] = useState<Date>(new Date());
   const [syncText, setSyncText] = useState('Just Now');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
-  // Initialize analytics on mount
+  // Initialize analytics on mount & handle responsive resize without layout jumps
   useEffect(() => {
     initAnalytics();
-    // Default open on desktop screens
-    if (window.innerWidth >= 1024) {
-      setSidebarOpen(true);
-    }
-  }, []);
+    const handleResize = () => {
+      // Auto-collapse when switching from desktop down to mobile breakpoint
+      if (window.innerWidth < 1024 && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [sidebarOpen]);
 
   // Synchronize activeTab with URL hash and browser history (popstate)
   useEffect(() => {
@@ -153,7 +159,7 @@ function App() {
   const renderContent = () => {
     switch (activeTab) {
       case 'aqi':
-        return <AqiDashboard />;
+        return <AqiDashboard onNavigateTab={handleTabChange} />;
       case 'pollutants':
         return <PollutantDashboard />;
       case 'health':
@@ -219,9 +225,11 @@ function App() {
             {/* Hamburger / Toggle Button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition-all cursor-pointer shadow-xs flex items-center justify-center"
+              className="min-w-[40px] min-h-[40px] p-2 bg-slate-100/90 hover:bg-slate-200/90 border border-slate-200 rounded-xl text-slate-700 hover:text-slate-900 transition-all cursor-pointer shadow-xs flex items-center justify-center"
               title={sidebarOpen ? "Collapse Navigation" : "Expand Navigation"}
               aria-label={sidebarOpen ? "Collapse navigation sidebar" : "Expand navigation sidebar"}
+              aria-expanded={sidebarOpen}
+              aria-controls="primary-sidebar"
             >
               <span className="text-sm font-bold leading-none">{sidebarOpen ? '◀' : '☰'}</span>
             </button>
@@ -234,7 +242,7 @@ function App() {
             {/* Quick Access to 3D Pipeline Digital Twin */}
             <button
               onClick={() => handleTabChange('pipeline')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${
                 isPipelineActive
                   ? 'bg-sky-600 text-white border-sky-500 ring-2 ring-sky-500/20'
                   : 'bg-gradient-to-r from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-900 border-sky-200/80 hover:border-sky-300'
@@ -257,7 +265,7 @@ function App() {
             {/* High-Converting Primary Call To Action (CTA) */}
             <button
               onClick={() => setAlertModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs border border-sky-500 flex items-center gap-1.5 transition-all hover:scale-[1.02] cursor-pointer"
+              className="min-h-[38px] px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-xs border border-sky-500 flex items-center gap-1.5 transition-all hover:scale-[1.02] cursor-pointer"
               title="Activate Real-Time Air Quality & Hotspot Notifications"
             >
               <span className="animate-pulse">🔔</span>
@@ -265,22 +273,27 @@ function App() {
               <span className="sm:hidden">Alerts</span>
             </button>
 
-            {/* Auto Refresh Toggler */}
-            <div className="hidden sm:flex items-center gap-2 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+            {/* Auto Refresh Toggler with 44px+ touch target */}
+            <div className="hidden sm:flex items-center gap-1.5 bg-white px-2.5 py-0.5 rounded-lg border border-slate-200 shadow-2xs min-h-[38px]">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Auto Sync</span>
               <button
                 onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`w-7 h-4 rounded-full relative transition-colors duration-200 focus:outline-none cursor-pointer ${
-                  autoRefresh ? 'bg-sky-600' : 'bg-slate-300'
-                }`}
+                className="min-w-[44px] min-h-[36px] flex items-center justify-center p-1.5 focus:outline-none cursor-pointer"
                 title={autoRefresh ? "Disable Real-Time Auto Sync" : "Enable Real-Time Auto Sync"}
                 aria-label="Toggle real-time auto sync"
+                aria-pressed={autoRefresh}
               >
                 <span
-                  className={`block w-2.5 h-2.5 rounded-full bg-white absolute top-0.5 transition-all duration-200 shadow-xs ${
-                    autoRefresh ? 'left-4' : 'left-0.5'
+                  className={`w-7 h-4 rounded-full relative transition-colors duration-200 inline-block ${
+                    autoRefresh ? 'bg-sky-600' : 'bg-slate-300'
                   }`}
-                ></span>
+                >
+                  <span
+                    className={`block w-2.5 h-2.5 rounded-full bg-white absolute top-0.5 transition-all duration-200 shadow-xs ${
+                      autoRefresh ? 'left-4' : 'left-0.5'
+                    }`}
+                  ></span>
+                </span>
               </button>
               {autoRefresh && <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping"></span>}
             </div>

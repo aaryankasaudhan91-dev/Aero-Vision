@@ -244,12 +244,12 @@ export const WeatherDashboard: React.FC = () => {
     <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
             Climate & Weather Dynamics
             {loading && (
               <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></span>
             )}
-          </h2>
+          </h1>
           <p className="text-slate-500 text-sm mt-1">
             AI-driven weather forecast model integration powered by NVIDIA FourCastNet & ERA5 ECMWF.
           </p>

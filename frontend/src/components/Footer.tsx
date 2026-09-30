@@ -32,11 +32,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           {/* Col 2: Dashboards & Geospatial */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">Geospatial Intelligence</h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               <li>
                 <button
                   onClick={() => onNavigate('aqi')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
                   CPCB Ground AQI Overview
                 </button>
@@ -44,15 +44,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button
                   onClick={() => onNavigate('pollutants')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
-                  Pollutant Maps (PM2.5 & PM10)
+                  Pollutant Maps (PM2.5 &amp; PM10)
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => onNavigate('hcho')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
                   Sentinel-5P HCHO Hotspots
                 </button>
@@ -60,7 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button
                   onClick={() => onNavigate('fire')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
                   NASA FIRMS Active Fire Correlation
                 </button>
@@ -68,7 +68,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button
                   onClick={() => onNavigate('weather')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
                   FourCastNet Weather Forecasts
                 </button>
@@ -78,14 +78,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
           {/* Col 3: Research & Partners */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">Data Providers & Attribution</h4>
-            <ul className="space-y-1.5">
+            <h4 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">Data Providers &amp; Attribution</h4>
+            <ul className="space-y-1">
               <li>
                 <a
                   href="https://cpcb.nic.in"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1"
+                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1 py-1.5 min-h-[30px]"
                 >
                   <span>CPCB CAAQMS India</span>
                   <span className="text-[10px] opacity-70">↗</span>
@@ -96,7 +96,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   href="https://www.isro.gov.in"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1"
+                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1 py-1.5 min-h-[30px]"
                 >
                   <span>ISRO Space Applications Centre</span>
                   <span className="text-[10px] opacity-70">↗</span>
@@ -107,7 +107,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   href="https://firms.modaps.eosdis.nasa.gov"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1"
+                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1 py-1.5 min-h-[30px]"
                 >
                   <span>NASA FIRMS Fire Telemetry</span>
                   <span className="text-[10px] opacity-70">↗</span>
@@ -118,7 +118,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   href="https://cds.climate.copernicus.eu"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1"
+                  className="hover:text-sky-600 transition-colors inline-flex items-center gap-1 py-1.5 min-h-[30px]"
                 >
                   <span>Copernicus Climate Data Store</span>
                   <span className="text-[10px] opacity-70">↗</span>
@@ -129,28 +129,28 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
           {/* Col 4: Legal & Governance */}
           <div className="space-y-2.5">
-            <h4 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">Legal & Compliance</h4>
-            <ul className="space-y-1.5">
+            <h4 className="text-xs font-heading font-bold text-slate-800 uppercase tracking-wider">Legal &amp; Compliance</h4>
+            <ul className="space-y-1">
               <li>
                 <button
                   onClick={() => onNavigate('privacy')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
-                  Privacy Policy (DPDP & GDPR)
+                  Privacy Policy (DPDP &amp; GDPR)
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => onNavigate('terms')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
-                  Terms & Conditions
+                  Terms &amp; Conditions
                 </button>
               </li>
               <li>
                 <button
                   onClick={handleOpenCookies}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left flex items-center gap-1.5"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left flex items-center gap-1.5 py-1.5 min-h-[30px]"
                 >
                   <span>Cookie Preferences</span>
                   <span className="text-[10px] px-1.5 py-0.5 bg-sky-50 text-sky-700 rounded font-semibold border border-sky-200">
@@ -161,7 +161,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button
                   onClick={() => onNavigate('reports')}
-                  className="hover:text-sky-600 transition-colors cursor-pointer text-left"
+                  className="hover:text-sky-600 transition-colors cursor-pointer text-left py-1.5 min-h-[30px] inline-flex items-center"
                 >
                   Research Reports Archive
                 </button>

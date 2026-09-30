@@ -65,16 +65,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-3 sm:gap-4 items-end flex-1">
         {/* State Filter */}
         <div className="flex flex-col gap-1 w-full md:w-auto">
-          <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+          <label htmlFor="filter-state-select" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
             Region / State
           </label>
           <select
+            id="filter-state-select"
             value={selectedState}
             onChange={(e) => {
               setSelectedState(e.target.value);
               if (setSelectedCity) setSelectedCity('');
             }}
-            className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[38px]"
+            className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[42px]"
           >
             {states.map((st) => (
               <option key={st} value={st === 'All India' ? '' : st}>
@@ -87,13 +88,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* City Filter */}
         {setSelectedCity && cities && (
           <div className="flex flex-col gap-1 w-full md:w-auto">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+            <label htmlFor="filter-city-select" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
               City
             </label>
             <select
+              id="filter-city-select"
               value={selectedCity || ''}
               onChange={(e) => setSelectedCity(e.target.value)}
-              className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[38px]"
+              className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[42px]"
             >
               <option value="">All Cities</option>
               {cities.map((city) => (
@@ -108,18 +110,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         {/* Date Filter */}
         <div className="flex flex-col gap-1 w-full md:w-auto">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+            <label htmlFor="filter-date-input" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
               Observation Date
             </label>
             <button
+              type="button"
               onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-              className="text-[9px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-wider flex items-center gap-0.5 cursor-pointer"
+              className="text-[10px] font-bold text-rose-600 hover:text-rose-700 uppercase tracking-wider flex items-center gap-1 px-2 py-1 min-h-[30px] rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
               title="Set to today's real-time feed"
+              aria-label="Set observation date to today"
             >
               <span>⚡</span> Live Today
             </button>
           </div>
           <input
+            id="filter-date-input"
             type="date"
             value={selectedDate}
             onChange={(e) => {
@@ -128,20 +133,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 setSelectedDate(val);
               }
             }}
-            className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer font-mono min-h-[38px]"
+            className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer font-mono min-h-[42px]"
           />
         </div>
 
         {/* Pollutant Filter */}
         {pollutants && selectedPollutant && setSelectedPollutant && (
           <div className="flex flex-col gap-1 w-full md:w-auto">
-            <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
+            <label htmlFor="filter-pollutant-select" className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-heading">
               Target Pollutant
             </label>
             <select
+              id="filter-pollutant-select"
               value={selectedPollutant}
               onChange={(e) => setSelectedPollutant(e.target.value)}
-              className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[38px]"
+              className="w-full md:w-auto bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium text-slate-800 outline-none hover:border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all cursor-pointer min-h-[42px]"
             >
               {pollutants.map((p) => (
                 <option key={p} value={p}>
@@ -155,8 +161,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
       <div className="flex gap-2 w-full md:w-auto pt-1 md:pt-0">
         <button
+          type="button"
           onClick={onRefresh}
-          className="w-full md:w-auto justify-center bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl px-3.5 py-2 flex items-center gap-2 border border-slate-200 transition duration-150 cursor-pointer shadow-2xs hover:border-slate-300 min-h-[38px]"
+          className="w-full md:w-auto justify-center bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl px-4 py-2.5 flex items-center gap-2 border border-slate-200 transition duration-150 cursor-pointer shadow-2xs hover:border-slate-300 min-h-[42px]"
         >
           <span>🔄</span>
           <span>Refresh Data</span>

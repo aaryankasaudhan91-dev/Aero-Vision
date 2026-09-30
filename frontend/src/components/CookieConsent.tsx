@@ -75,19 +75,19 @@ export const CookieConsent: React.FC = () => {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               onClick={handleAcceptAll}
-              className="flex-1 py-2 px-3.5 bg-purple-600 hover:bg-purple-700 !text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+              className="flex-1 min-h-[40px] py-2 px-3.5 bg-purple-600 hover:bg-purple-700 !text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center justify-center"
             >
               Accept All
             </button>
             <button
               onClick={handleDecline}
-              className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="min-h-[40px] py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center"
             >
               Decline Optional
             </button>
             <button
               onClick={() => setShowModal(true)}
-              className="py-2 px-2.5 text-purple-600 hover:text-purple-800 text-xs font-semibold underline underline-offset-4 transition-colors cursor-pointer"
+              className="min-h-[40px] py-2 px-2.5 text-purple-600 hover:text-purple-800 text-xs font-semibold underline underline-offset-4 transition-colors cursor-pointer flex items-center justify-center"
             >
               Customize
             </button>
@@ -113,10 +113,10 @@ export const CookieConsent: React.FC = () => {
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-700 text-lg p-1 cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl hover:bg-slate-100 cursor-pointer text-lg"
                 aria-label="Close modal"
               >
-                ✕
+                <span className="leading-none">✕</span>
               </button>
             </div>
 
@@ -194,13 +194,13 @@ export const CookieConsent: React.FC = () => {
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={handleDecline}
-                className="py-2 px-3 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                className="min-h-[40px] py-2 px-3 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer flex items-center justify-center"
               >
                 Reject Non-Essential
               </button>
               <button
                 onClick={handleSaveCustom}
-                className="py-2 px-4 bg-purple-600 hover:bg-purple-700 !text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
+                className="min-h-[40px] py-2 px-4 bg-purple-600 hover:bg-purple-700 !text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer flex items-center justify-center"
               >
                 Save Preferences
               </button>

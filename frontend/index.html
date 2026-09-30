@@ -16,14 +16,21 @@
     }
   </script>
 
-  <!-- Performance Preconnect Hints -->
+  <!-- Performance Preconnect & DNS Hints -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-  <link rel="dns-prefetch" href="https://unpkg.com" />
-  <link
+
+  <!-- Non-Render-Blocking Google Fonts (eliminates 400ms render blocking penalty) -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet" />
+    media="print" onload="this.media='all'" />
+  <noscript>
+    <link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
+  </noscript>
 
   <!-- Meta Title, Description, and SEO -->
   <title>AeroVision — Surface AQI & HCHO Hotspot Intelligence Platform | Satellite Atmospheric Analytics</title>
@@ -34,6 +41,10 @@
   <meta name="author" content="Project AeroVision Research Team" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <link rel="canonical" href="https://aerovision.in/" />
+
+  <!-- Agentic Resource Discovery (ARD) and LLM Directives -->
+  <link rel="describedby" type="text/markdown" href="/llms.txt" />
+  <link rel="ai-catalog" type="application/json" href="/.well-known/ai-catalog.json" />
 
   <!-- Responsive Viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
@@ -47,16 +58,19 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials" />
 
-  <!-- Open Graph Meta Tags for Social Previews (Facebook, LinkedIn, Discord, Slack) -->
+  <!-- Critical Asset Preload -->
+  <link rel="preload" as="image" href="/app-logo.webp" type="image/webp" />
+
+  <!-- Open Graph Meta Tags for Social Previews (Optimized WebP Image) -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://aerovision.in/" />
   <meta property="og:site_name" content="AeroVision India" />
   <meta property="og:title" content="AeroVision — Surface AQI & HCHO Hotspot Intelligence Platform" />
   <meta property="og:description"
     content="National-scale geospatial atmospheric analytics combining Sentinel-5P satellite observations, CPCB ground telemetry, NASA active fires, and AI prognostic models." />
-  <meta property="og:image" content="https://aerovision.in/og-preview.png" />
-  <meta property="og:image:secure_url" content="https://aerovision.in/og-preview.png" />
-  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image" content="https://aerovision.in/og-preview.webp" />
+  <meta property="og:image:secure_url" content="https://aerovision.in/og-preview.webp" />
+  <meta property="og:image:type" content="image/webp" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="AeroVision Satellite Atmospheric Intelligence Platform Preview" />
@@ -69,7 +83,7 @@
   <meta name="twitter:title" content="AeroVision — Surface AQI & HCHO Hotspot Intelligence" />
   <meta name="twitter:description"
     content="Real-time CPCB ground telemetry, Sentinel-5P HCHO hotspots, NASA active fire tracking, and ML air quality predictions over India." />
-  <meta name="twitter:image" content="https://aerovision.in/og-preview.png" />
+  <meta name="twitter:image" content="https://aerovision.in/og-preview.webp" />
   <meta name="twitter:image:alt" content="AeroVision Satellite Atmospheric Intelligence Platform Preview" />
 </head>
 

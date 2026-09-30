@@ -142,10 +142,10 @@ export const ReportsDashboard: React.FC = () => {
     <div className="flex-1 p-6 space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
             Research Reports & Scientific Papers
             {loading && <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-purple-500 border-t-transparent"></span>}
-          </h2>
+          </h1>
           <p className="text-slate-400 text-sm">
             Automated compilation of remote sensing studies, model evaluations, and pollutant transport analysis.
           </p>

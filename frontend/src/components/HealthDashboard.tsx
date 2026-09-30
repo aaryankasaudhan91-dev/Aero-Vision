@@ -247,12 +247,12 @@ export const HealthDashboard: React.FC = () => {
     <div className="flex-1 p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
             🏥 Health Impact & Air Quality Early Warning System
             {loading && (
               <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></span>
             )}
-          </h2>
+          </h1>
           <p className="text-slate-500 text-sm mt-1">
             Dynamic public health exposure risk assessment combining ground telemetry, NASA active fires, and TROPOMI column densities.
           </p>

@@ -160,9 +160,9 @@ export const AqiDashboard: React.FC<AqiDashboardProps> = ({ onNavigateTab }) => 
         <div>
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse"></span>
-            <h2 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900">
+            <h1 className="text-2xl md:text-3xl font-heading font-extrabold tracking-tight text-slate-900">
               National AQI Overview
-            </h2>
+            </h1>
             {loading && (
               <span className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent ml-2"></span>
             )}
@@ -192,9 +192,9 @@ export const AqiDashboard: React.FC<AqiDashboardProps> = ({ onNavigateTab }) => 
               </span>
               <span className="text-xs text-sky-400 font-mono">5 Real-time Stages</span>
             </div>
-            <h3 className="text-base font-heading font-bold text-white mt-0.5">
+            <h2 className="text-base font-heading font-bold text-white mt-0.5">
               Explore the AeroVision Atmospheric Processing Machine
-            </h3>
+            </h2>
             <p className="text-xs text-slate-300 mt-0.5 max-w-2xl">
               Inspect how raw CPCB ground sensors & Sentinel-5P TROPOMI satellite feeds pass through AI transport physics, 3D cartography, and public health advisory algorithms.
             </p>
@@ -209,7 +209,7 @@ export const AqiDashboard: React.FC<AqiDashboardProps> = ({ onNavigateTab }) => 
               window.location.hash = 'pipeline';
             }
           }}
-          className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
+          className="min-h-[40px] px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-md transition-all flex items-center gap-2 shrink-0 cursor-pointer hover:scale-[1.02]"
         >
           <span>Launch 3D Pipeline</span>
           <span>→</span>

@@ -1,0 +1,35 @@
+# AeroVision — Full Platform Architecture & Intelligence Guide
+
+> AeroVision is a national-scale geospatial atmospheric analytics and AI forecasting platform for India, integrating Central Pollution Control Board (CPCB) continuous ground telemetry, Sentinel-5P TROPOMI satellite formaldehyde (HCHO) observations, NASA FIRMS active fire detection, and ECMWF ERA5 planetary boundary layer physics.
+
+## Architecture Overview
+
+AeroVision connects four primary observational and prognostic layers:
+1. **Ground Network Layer**: Continuous ambient air quality monitoring stations (CAAQMS) operated by the Central Pollution Control Board (CPCB) across 30+ states and union territories. Ground sensors monitor PM2.5, PM10, SO2, NO2, CO, and O3 at 15-minute intervals.
+2. **Spaceborne Earth Observation Layer**: Copernicus Sentinel-5P TROPOMI sensor measuring tropospheric column densities of formaldehyde (HCHO) and nitrogen dioxide (NO2). NASA FIRMS (VIIRS and MODIS) providing active thermal anomaly and fire radiative power (FRP) telemetry.
+3. **Atmospheric Physics & AI Prognostic Layer**: ECMWF ERA5 reanalysis and NVIDIA FourCastNet deep learning models simulating planetary boundary layer dynamics, wind vector streamline trajectories, and smoke plume dispersion.
+4. **Public Cartography & Early Warning Layer**: Edge-rendered 2D Leaflet GIS and 3D WebGL subcontinental cartography delivering real-time air quality index scores and health protection advisories.
+
+## Analytical Dashboards
+
+- [National AQI Overview](https://aerovision.in/#aqi): Real-time air quality index telemetry from over 500 CPCB continuous ambient air quality monitoring stations (CAAQMS) with 7-day trend modeling.
+- [Pollutant Concentration Cartography](https://aerovision.in/#pollutants): Geospatial distribution maps for particulate matter (PM2.5, PM10) and criteria gases (NO2, SO2, CO, Ozone).
+- [Sentinel-5P HCHO Hotspots](https://aerovision.in/#hcho): Multispectral TROPOMI tropospheric formaldehyde column observations for petrochemical and biogenic VOC tracking.
+- [NASA FIRMS Thermal Fire Correlation](https://aerovision.in/#fire): Near real-time satellite fire radiative power (FRP) correlated with smoke dispersion and stubble burning episodes.
+- [Atmospheric Transport Dynamics](https://aerovision.in/#transport): Wind vector trajectories and planetary boundary layer dispersion modeling for transboundary pollution plumes.
+- [ECMWF Weather & Planetary Boundary Layer](https://aerovision.in/#weather): Boundary layer height, temperature inversions, relative humidity, and surface wind fields.
+- [AI Early Warning Insights](https://aerovision.in/#insights): Automated machine learning intelligence detecting anomalous particulate spikes and advisory conditions.
+- [Research & Policy Reports](https://aerovision.in/#reports): Curated open-access reports on episodic air pollution events and satellite sensor validation over India.
+- [Interactive 3D Pipeline Digital Twin](https://aerovision.in/#pipeline): Five-stage atmospheric processing pipeline simulation modeling telemetry ingestion, satellite observation, AI transport physics, cartography, and health advisories.
+
+## Machine Readable Interfaces
+
+- [OpenAPI Specification](https://aero-vision.onrender.com/openapi.json): Standard OpenAPI 3.1 REST API specification detailing real-time endpoints for stations, pollutants, hotspots, and predictions.
+- [Agentic Resource Discovery Catalog](https://aerovision.in/.well-known/ai-catalog.json): Machine-readable ARD AI catalog enabling autonomous agents to discover AeroVision tools and capabilities.
+- [XML Sitemap](https://aerovision.in/sitemap.xml): Comprehensive URL index of all national atmospheric analytical modules.
+
+## Governance & Attribution
+
+- Primary ground truth is attributed to CPCB (Central Pollution Control Board, Ministry of Environment, Forest and Climate Change, Government of India).
+- Satellite earth observation data is attributed to European Space Agency (ESA) Copernicus Sentinel-5P and NASA Earthdata FIRMS.
+- Atmospheric models and boundary layer physics are attributed to ECMWF ERA5 and ISRO Space Applications Centre.
