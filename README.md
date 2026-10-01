@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <strong>Lead Developer / Student Researcher:</strong> Aaryan Kasaudhan (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>)<br/>
+  <strong>Lead Developers / Student Researchers:</strong> Aaryan Kasaudhan, Akshay Paswan, Jitendra Choudhary (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>)<br/>
   <em>Academic Student Research Project · Non-Commercial Open Science Demonstration</em>
 </p>
 
@@ -378,12 +378,12 @@ The UI is built on the **Atmospheric Intelligence** design system generated via 
 
 ## 📄 License & Academic Attribution
 
-This project is an **Academic Student Research Project** led by **Aaryan Kasaudhan** (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>) for educational, scientific, and non-commercial public interest research.
+This project is an **Academic Student Research Project** led by **Aaryan Kasaudhan, Akshay Paswan, and Jitendra Choudhary** (<a href="mailto:aaryankasaudhan91@gmail.com">aaryankasaudhan91@gmail.com</a>) for educational, scientific, and non-commercial public interest research.
 
 Atmospheric datasets are sourced from open satellite and public observation networks (ESA Copernicus Sentinel-5P, NASA FIRMS, CPCB India, and ECMWF). All rights to underlying satellite data belong to their respective agencies.
 
 ---
 
 <p align="center">
-  Built with ❤️ by Aaryan Kasaudhan for India's atmospheric intelligence mission · AeroVision V1.2.1
+  Built with ❤️ by Aaryan Kasaudhan, Akshay Paswan &amp; Jitendra Choudhary for India's atmospheric intelligence mission · AeroVision V1.2.1
 </p>

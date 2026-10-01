@@ -195,12 +195,6 @@ function App() {
     }
   };
 
-  const isPipelineActive =
-    activeTab === 'pipeline' ||
-    activeTab === 'factory' ||
-    activeTab === 'demo' ||
-    activeTab === '3d' ||
-    activeTab === 'aero-pipeline';
 
   return (
     <div className="flex bg-slate-50 min-h-screen text-slate-900 font-sans relative selection:bg-sky-500 selection:text-white">
@@ -238,23 +232,6 @@ function App() {
               <span>🇮🇳</span>
               <span>India National Grid</span>
             </span>
-
-            {/* Quick Access to 3D Pipeline Digital Twin */}
-            <button
-              onClick={() => handleTabChange('pipeline')}
-              className={`min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                isPipelineActive
-                  ? 'bg-sky-600 text-white border-sky-500 ring-2 ring-sky-500/20'
-                  : 'bg-gradient-to-r from-sky-50 to-indigo-50 hover:from-sky-100 hover:to-indigo-100 text-sky-900 border-sky-200/80 hover:border-sky-300'
-              }`}
-              title="Launch AeroVision 3D Pipeline Simulation Twin"
-            >
-              <span className="text-sm">🛰️</span>
-              <span className="font-heading">3D Pipeline Twin</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-sky-500 text-white font-mono uppercase tracking-wider font-extrabold hidden md:inline">
-                3D
-              </span>
-            </button>
 
             <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 hidden xl:inline-flex shadow-2xs">
               V1.2.0-Production
