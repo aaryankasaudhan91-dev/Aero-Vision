@@ -1,14 +1,15 @@
 {
+  "$schema": "https://raw.githubusercontent.com/ards-project/ard-spec/main/spec/schemas/ai-catalog.schema.json",
   "specVersion": "1.0",
   "host": {
     "displayName": "AeroVision India",
-    "identifier": "did:web:aerovision.in",
-    "documentationUrl": "https://aerovision.in/#reports",
-    "logoUrl": "https://aerovision.in/app-logo.webp"
+    "identifier": "did:web:aero-vision-chi.vercel.app",
+    "documentationUrl": "https://aero-vision-chi.vercel.app/#reports",
+    "logoUrl": "https://aero-vision-chi.vercel.app/app-logo.webp"
   },
   "entries": [
     {
-      "identifier": "urn:air:aerovision.in:api:aqi-telemetry",
+      "identifier": "urn:air:aerovision:api:aqi-telemetry",
       "displayName": "AeroVision National Air Quality Index API",
       "type": "application/openapi+json",
       "url": "https://aero-vision.onrender.com/openapi.json",
@@ -20,7 +21,7 @@
       ]
     },
     {
-      "identifier": "urn:air:aerovision.in:api:hcho-hotspots",
+      "identifier": "urn:air:aerovision:api:hcho-hotspots",
       "displayName": "Sentinel-5P HCHO Formaldehyde Hotspot API",
       "type": "application/openapi+json",
       "url": "https://aero-vision.onrender.com/openapi.json",
@@ -32,7 +33,7 @@
       ]
     },
     {
-      "identifier": "urn:air:aerovision.in:api:fire-correlation",
+      "identifier": "urn:air:aerovision:api:fire-correlation",
       "displayName": "NASA FIRMS Active Thermal Anomaly API",
       "type": "application/openapi+json",
       "url": "https://aero-vision.onrender.com/openapi.json",
@@ -43,7 +44,7 @@
       ]
     },
     {
-      "identifier": "urn:air:aerovision.in:api:weather-dynamics",
+      "identifier": "urn:air:aerovision:api:weather-dynamics",
       "displayName": "ECMWF ERA5 & Planetary Boundary Layer API",
       "type": "application/openapi+json",
       "url": "https://aero-vision.onrender.com/openapi.json",
