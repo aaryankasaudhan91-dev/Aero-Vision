@@ -172,7 +172,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         {/* Bottom Bar */}
         <div className="pt-6 border-t border-slate-200/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
-          <p>© {new Date().getFullYear()} Project AeroVision. Academic Student Research Project by Aaryan Kasaudhan.</p>
+          <p>© {new Date().getFullYear()} Project AeroVision. Academic Student Research Project by Aaryan Kasaudhan, Akshay Paswan &amp; Jitendra Choudhary.</p>
           <div className="flex items-center gap-3">
             <span>Academic Open Science</span>
             <span>•</span>

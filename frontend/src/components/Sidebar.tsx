@@ -75,15 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </div>
           </div>
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 lg:hidden rounded-lg transition-colors cursor-pointer"
-              aria-label="Close sidebar navigation"
-            >
-              <span className="text-base leading-none">✕</span>
-            </button>
-          )}
         </div>
 
         {/* Primary Dashboards Nav */}

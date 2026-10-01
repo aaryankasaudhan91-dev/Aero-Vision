@@ -20,7 +20,7 @@ export const PrivacyPolicy: React.FC = () => {
             Privacy Policy
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-            Project Lead: <strong>Aaryan Kasaudhan</strong> | Educational Student Research Project | Last Updated: September 2026
+            Project Leads & Developers: <strong>Aaryan Kasaudhan, Akshay Paswan, Jitendra Choudhary</strong> | Educational Student Research Project | Last Updated: September 2026
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export const PrivacyPolicy: React.FC = () => {
               <span>1. Overview & Nature of the Project</span>
             </h2>
             <p>
-              Project AeroVision is an independent, non-commercial educational research initiative created and developed by <strong>Aaryan Kasaudhan</strong> as a student academic research and portfolio project. The project explores the intersection of satellite remote sensing, machine learning, and geospatial visualization for atmospheric air quality (AQI) and formaldehyde (HCHO) hotspot analysis over India.
+              Project AeroVision is an independent, non-commercial educational research initiative created and developed by <strong>Aaryan Kasaudhan, Akshay Paswan &amp; Jitendra Choudhary</strong> as a student academic research and portfolio project. The project explores the intersection of satellite remote sensing, machine learning, and geospatial visualization for atmospheric air quality (AQI) and formaldehyde (HCHO) hotspot analysis over India.
             </p>
             <p>
               This platform is not an official government entity, commercial enterprise, or institutional data broker. We adhere to transparent, student-level data minimization and respect user privacy in accordance with general data protection standards and the Digital Personal Data Protection Act (DPDP), 2023.
@@ -137,7 +137,7 @@ export const PrivacyPolicy: React.FC = () => {
             </p>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
               <p className="font-bold text-slate-950 dark:text-white text-sm">Project AeroVision — Student Research Project</p>
-              <p>Lead Developer & Student Researcher: <strong>Aaryan Kasaudhan</strong></p>
+              <p>Lead Developers & Student Researchers: <strong>Aaryan Kasaudhan, Akshay Paswan, Jitendra Choudhary</strong></p>
               <p>
                 Email: <a href="mailto:aaryankasaudhan91@gmail.com" className="text-purple-600 dark:text-purple-400 font-semibold hover:underline">aaryankasaudhan91@gmail.com</a>
               </p>

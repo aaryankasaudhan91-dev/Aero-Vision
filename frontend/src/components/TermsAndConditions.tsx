@@ -16,7 +16,7 @@ export const TermsAndConditions: React.FC = () => {
             Terms & Conditions of Use
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-            Project Lead: <strong>Aaryan Kasaudhan</strong> | Non-Commercial Student Academic Project | Effective: September 2026
+            Project Leads & Developers: <strong>Aaryan Kasaudhan, Akshay Paswan, Jitendra Choudhary</strong> | Non-Commercial Student Academic Project | Effective: September 2026
           </p>
         </div>
 
@@ -27,7 +27,7 @@ export const TermsAndConditions: React.FC = () => {
             <strong className="font-bold block text-amber-950 dark:text-amber-100 text-sm mb-0.5">
               Academic Student Project Disclaimer
             </strong>
-            Project AeroVision is an independent, non-commercial student research project developed by <strong>Aaryan Kasaudhan & its team</strong> for academic learning, environmental data exploration, and machine learning research demonstration. The values, predictions, and hotspots displayed are intended strictly for educational and scientific research purposes, and do not constitute official statutory directives or emergency declarations from national disaster management agencies.
+            Project AeroVision is an independent, non-commercial student research project developed by <strong>Aaryan Kasaudhan, Akshay Paswan &amp; Jitendra Choudhary</strong> for academic learning, environmental data exploration, and machine learning research demonstration. The values, predictions, and hotspots displayed are intended strictly for educational and scientific research purposes, and do not constitute official statutory directives or emergency declarations from national disaster management agencies.
           </div>
         </div>
 
@@ -47,7 +47,7 @@ export const TermsAndConditions: React.FC = () => {
             </p>
             <ul className="list-disc pl-6 space-y-1.5 text-slate-700 dark:text-slate-300">
               <li><strong>Free Academic Use:</strong> Students, educators, researchers, and citizens are freely welcome to explore, analyze, and cite the visual analytics and machine learning methodologies.</li>
-              <li><strong>Academic Attribution:</strong> If citing or presenting this project in academic coursework, presentations, or research papers, please reference: <em>&quot;Project AeroVision: Student Atmospheric Telemetry & Surface AQI Research by Aaryan Kasaudhan (2026)&quot;</em>.</li>
+              <li><strong>Academic Attribution:</strong> If citing or presenting this project in academic coursework, presentations, or research papers, please reference: <em>&quot;Project AeroVision: Student Atmospheric Telemetry &amp; Surface AQI Research by Aaryan Kasaudhan, Akshay Paswan &amp; Jitendra Choudhary (2026)&quot;</em>.</li>
               <li><strong>Public Data Credits:</strong> Respect and acknowledge the underlying open data sources that make this research possible: CPCB India, ESA Copernicus Sentinel-5P, NASA FIRMS, and ECMWF ERA5.</li>
             </ul>
           </section>
@@ -85,7 +85,7 @@ export const TermsAndConditions: React.FC = () => {
             </p>
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
               <p className="font-bold text-slate-950 dark:text-white text-sm">Project AeroVision — Student Research Project</p>
-              <p>Lead Developers: <strong>Aaryan Kasaudhan, Jitendra Choudhary, Akshay Paswan</strong></p>
+              <p>Lead Developers: <strong>Aaryan Kasaudhan, Akshay Paswan, Jitendra Choudhary</strong></p>
               <p>
                 Email: <a href="mailto:aaryankasaudhan91@gmail.com" className="text-purple-600 dark:text-purple-400 font-semibold hover:underline">aaryankasaudhan91@gmail.com</a>
               </p>
