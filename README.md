@@ -60,6 +60,8 @@ The platform is deployed and accessible globally at:
 
 ## 🏗️ Architecture
 
+[![Architecture diagram of aaryankasaudhan91-dev/aero-vision](https://gitdiagram.com/aaryankasaudhan91-dev/aero-vision/diagram.png)](https://gitdiagram.com/aaryankasaudhan91-dev/aero-vision?utm_source=readme&utm_medium=picture)
+
 ```
 aero-vision/
 ├── backend/                        # Python FastAPI service

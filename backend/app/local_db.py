@@ -777,12 +777,15 @@ def _seed_real_insights_and_reports(conn: sqlite3.Connection):
     ]
 
     for rtype, title, abstract, status in reports:
-        cur.execute(
-            """INSERT OR IGNORE INTO reports
-            (report_type, title, abstract, generated_at, status)
-            VALUES (?, ?, ?, ?, ?)""",
-            (rtype, title, abstract, now_str, status)
-        )
+        cur.execute("SELECT id, content FROM reports WHERE title = ?", (title,))
+        existing = cur.fetchone()
+        if not existing:
+            cur.execute(
+                """INSERT INTO reports
+                (report_type, title, abstract, generated_at, status)
+                VALUES (?, ?, ?, ?, ?)""",
+                (rtype, title, abstract, now_str, status)
+            )
 
     conn.commit()
 
