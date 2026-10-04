@@ -799,6 +799,7 @@ class LocalQueryExecutor:
         self._count_mode: Optional[str] = None
         self._is_delete: bool = False
         self._update_data: Optional[Dict[str, Any]] = None
+        self._is_single: bool = False
 
     def select(self, cols: str = "*", count: Optional[str] = None):
         self._select_cols = cols
@@ -823,6 +824,19 @@ class LocalQueryExecutor:
 
     def in_(self, col: str, vals: List[Any]):
         self._filters.append((col, "IN", vals))
+        return self
+
+    def single(self):
+        self._is_single = True
+        self._limit = 1
+        return self
+
+    def ilike(self, col: str, val: str):
+        self._filters.append((col, "LIKE", val))
+        return self
+
+    def like(self, col: str, val: str):
+        self._filters.append((col, "LIKE", val))
         return self
 
     @property
@@ -977,6 +991,9 @@ class LocalQueryExecutor:
             data = [dict(r) for r in rows]
 
         conn.close()
+        if self._is_single:
+            single_row = data[0] if data else None
+            return QueryResult(data=single_row, count=1 if single_row else 0)
         return QueryResult(data=data, count=len(data))
 
 
