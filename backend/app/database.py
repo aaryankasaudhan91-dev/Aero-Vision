@@ -117,6 +117,33 @@ class ResilientTableProxy:
                 self.supabase_query = None
         return self
 
+    def single(self):
+        self.local_query.single()
+        if self.supabase_query:
+            try:
+                self.supabase_query = self.supabase_query.single()
+            except Exception:
+                self.supabase_query = None
+        return self
+
+    def ilike(self, *args, **kwargs):
+        self.local_query.ilike(*args, **kwargs)
+        if self.supabase_query:
+            try:
+                self.supabase_query = self.supabase_query.ilike(*args, **kwargs)
+            except Exception:
+                self.supabase_query = None
+        return self
+
+    def like(self, *args, **kwargs):
+        self.local_query.like(*args, **kwargs)
+        if self.supabase_query:
+            try:
+                self.supabase_query = self.supabase_query.like(*args, **kwargs)
+            except Exception:
+                self.supabase_query = None
+        return self
+
     def delete(self, *args, **kwargs):
         self.local_query.delete(*args, **kwargs)
         if self.supabase_query:
