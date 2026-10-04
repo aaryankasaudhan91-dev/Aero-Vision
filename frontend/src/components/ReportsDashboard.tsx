@@ -30,6 +30,7 @@ export const ReportsDashboard: React.FC = () => {
 
   // Selected Report for Interactive Document Reader
   const [viewingReport, setViewingReport] = useState<any | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -104,15 +105,38 @@ export const ReportsDashboard: React.FC = () => {
   };
 
   // Real PDF document downloader
-  const handleDownloadPDF = (rep: any) => {
-    const url = reportsApi.getDownloadUrl(rep.id);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("target", "_blank");
-    link.setAttribute("download", `${rep.title.toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadPDF = async (rep: any) => {
+    if (!rep?.id) return;
+    try {
+      setDownloadingId(rep.id);
+      const res = await reportsApi.download(rep.id);
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const safeTitle = (rep.title || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+      link.download = `${safeTitle}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      console.warn("Direct blob download failed, trying browser link fallback:", err);
+      try {
+        const fallbackUrl = reportsApi.getDownloadUrl(rep.id);
+        const link = document.createElement("a");
+        link.href = fallbackUrl;
+        link.target = "_blank";
+        link.download = `${(rep.title || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '_')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (fallbackErr) {
+        console.error("Download fallback failed:", fallbackErr);
+      }
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   // Debounced fetch on search or filter change
@@ -338,9 +362,20 @@ export const ReportsDashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleDownloadPDF(rep)}
-                    className="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg px-3 py-1.5 border border-purple-700 transition duration-150 flex items-center gap-1 cursor-pointer shadow-sm"
+                    disabled={downloadingId === rep.id}
+                    className="bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white text-xs font-semibold rounded-lg px-3 py-1.5 border border-purple-700 transition duration-150 flex items-center gap-1.5 cursor-pointer shadow-sm"
                   >
-                    📥 Download PDF
+                    {downloadingId === rep.id ? (
+                      <>
+                        <span className="inline-block animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></span>
+                        <span>Downloading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📄</span>
+                        <span>Download PDF</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -371,9 +406,20 @@ export const ReportsDashboard: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleDownloadPDF(viewingReport)}
-                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer"
+                  disabled={downloadingId === viewingReport.id}
+                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow cursor-pointer"
                 >
-                  📥 Download PDF
+                  {downloadingId === viewingReport.id ? (
+                    <>
+                      <span className="inline-block animate-spin rounded-full h-3 w-3 border border-white border-t-transparent"></span>
+                      <span>Downloading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📄</span>
+                      <span>Download PDF</span>
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={() => setViewingReport(null)}
