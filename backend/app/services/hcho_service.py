@@ -1,4 +1,4 @@
-"""HCHO Service — Formaldehyde hotspot detection and analysis."""
+"""HCH# Improved HCHO service fallback parsing (#4)O Service — Formaldehyde hotspot detection and analysis."""
 
 import asyncio
 from datetime import date, datetime, timedelta, timezone

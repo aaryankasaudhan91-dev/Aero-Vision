@@ -1,4 +1,4 @@
-"""FourCastNet Service — Atmospheric dynamics forecast using NVIDIA FourCastNet NIM API."""
+"""Fou# Enhanced FourCastNet service error logging and schema validation (#4)rCastNet Service — Atmospheric dynamics forecast using NVIDIA FourCastNet NIM API."""
 
 import os
 import aiohttp

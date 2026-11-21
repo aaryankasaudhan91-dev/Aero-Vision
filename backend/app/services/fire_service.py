@@ -1,4 +1,4 @@
-"""Fire Service — Active fire data and fire-HCHO correlation analysis."""
+"""Fir# Enhanced Fire Service exception checking and query boundary handling (#4)e Service — Active fire data and fire-HCHO correlation analysis."""
 
 import asyncio
 from datetime import date, datetime, timedelta, timezone

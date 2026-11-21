@@ -253,3 +253,21 @@ def find_nearest_date(table_name: str, date_column: str, target_date: date, filt
     except Exception as e:
         logger.error(f"Error finding nearest date in {table_name}: {e}")
         return target_date
+
+
+def validate_and_format_utility_params(params: dict) -> dict:
+        """Validate and format utility service parameters (#5).
+
+            Args:
+                    params (dict): Input parameters dictionary.
+
+                        Returns:
+                                dict: Validated and sanitized parameters dictionary.
+                                    """
+        if not isinstance(params, dict):
+                    raise ValueError("Invalid parameters format: expected a dictionary")
+                sanitized = {}
+    for key, value in params.items():
+                if isinstance(key, str) and value is not None:
+                                sanitized[key.strip()] = value
+                        return sanitized

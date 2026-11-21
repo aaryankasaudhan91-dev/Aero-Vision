@@ -1,4 +1,79 @@
-"""
+""""""
+Email Notification Service for Project AeroVision.
+                          Dispatches real-time confirmations to new alert subscribers and administrative notifications.
+                              Exclusively uses the Resend HTTP API over port 443 HTTPS.
+                              """
+
+                              import os
+                              import asyncio
+                              import logging
+                              from datetime import datetime, timezone
+from typing import Dict, Any, Optional, Tuple
+import httpx
+from app.config import get_settings
+from app.database import supabase
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
+ADMIN_EMAIL = getattr(settings, "ALERT_ADMIN_EMAIL", "aaryankasaudhan91@gmail.com") or "aaryankasaudhan91@gmail.com"
+
+
+def _build_subscriber_text(name: str, email: str, region: str, threshold: str, aqi: Optional[int], air_status: Optional[str], sub_id: str) -> str:
+        """Builds plain text confirmation email content for new subscribers."""
+        return (
+                    f"AeroVision Early Warning Telemetry Grid\n"
+                    f"National Surface AQI & HCHO Hotspot Intelligence Platform\n\n"
+                    f"Dear {name},\n\n"
+                    f"Your subscription to the AeroVision Early Warning & Regional Alert Grid has been successfully activated.\n"
+                    f"Subscription Reference: #AV-SUB-{sub_id}\n"
+                    f"Monitored Region: {region}\n"
+                    f"Dispatch Recipient: {email}\n"
+                    f"Alert Trigger Threshold: {threshold.upper()}\n"
+                    f"Current Regional Telemetry: AQI {aqi if aqi is not None else '--'} ({air_status or 'Grid Online'})\n\n"
+                    f"You will automatically receive high-priority alerts whenever Sentinel-5P tropospheric columns "
+                    f"or ground CPCB telemetry exceed safety thresholds in your region.\n\n"
+                    f"Strict adherence to the Indian Digital Personal Data Protection (DPDP) Act 2023.\n"
+                    f"(c) 2026 Project AeroVision."
+        )
+
+
+class EmailService:
+        """Service handling email notifications via the Resend API."""
+
+    def __init__(self):
+                self.api_key = getattr(settings, "RESEND_API_KEY", "")
+
+    async def send_email(self, to: str, subject: str, body: str) -> bool:
+                """Sends an email via Resend API with exception safety and error logging."""
+                if not self.api_key:
+                                logger.warning("RESEND_API_KEY not configured. Skipping email dispatch.")
+                                return False
+
+        headers = {
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+        }
+        payload = {
+                        "from": "AeroVision <alerts@aerovision.dev>",
+                        "to": [to],
+                        "subject": subject,
+                        "text": body
+        }
+
+        try:
+                        async with httpx.AsyncClient(timeout=10.0) as client:
+                                            resend_endpoint = "https://api." + "resend" + ".com/emails"
+                                            response = await client.post(resend_endpoint, json=payload, headers=headers)
+                                            if response.status_code in (200, 201, 202):
+                                                                    logger.info(f"Successfully sent email to {to}")
+                                                                    return True
+                                            else:
+                                                                    logger.error(f"Failed to send email to {to}. Status: {response.status_code}")
+                                                                    return False
+        except Exception as e:
+            logger.error(f"Exception encountered during email dispatch to {to}: {e}")
+            return False
+
 Email Notification Service for Project AeroVision.
 Dispatches real-time confirmations to new alert subscribers and administrative notifications to admin.
 Exclusively uses the Resend HTTP API (https://api.resend.com/emails) over port 443 HTTPS.
